@@ -5,6 +5,7 @@ import SwiftUI
 /// Fullscreen Launchpad content, displayed inside a blurred overlay window.
 public struct LaunchpadView: View {
     private let onDismiss: () -> Void
+    private let onOpenSettings: () -> Void
     @State private var viewModel = ContentViewModel()
     @State private var appeared = false
     @State private var scroller = PageScroller()
@@ -35,8 +36,12 @@ public struct LaunchpadView: View {
     /// apps are installed or removed.
     @State private var directoryChangeObserver: (any NSObjectProtocol)?
 
-    public init(onDismiss: @escaping () -> Void) {
+    public init(
+        onDismiss: @escaping () -> Void,
+        onOpenSettings: @escaping () -> Void = {}
+    ) {
         self.onDismiss = onDismiss
+        self.onOpenSettings = onOpenSettings
     }
 
     public var body: some View {
@@ -587,6 +592,11 @@ public struct LaunchpadView: View {
             return event
         }
         switch event.keyCode {
+        case 43 where event.modifierFlags.contains(.command): // Cmd+, → Settings
+            // Keep the event so the app menu can open Settings; just dismiss
+            // the overlay first.
+            onOpenSettings()
+            return event
         case 53: // Esc
             if isJiggleMode {
                 exitJiggleMode()

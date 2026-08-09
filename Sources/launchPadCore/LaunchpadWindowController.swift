@@ -72,9 +72,16 @@ public final class LaunchpadWindowController: NSObject {
         blurView.blendingMode = .behindWindow
         blurView.state = .active
 
-        let hostingView = NSHostingView(rootView: LaunchpadView(onDismiss: { [weak self] in
-            self?.close()
-        }))
+        let hostingView = NSHostingView(rootView: LaunchpadView(
+            onDismiss: { [weak self] in
+                self?.close()
+            },
+            onOpenSettings: { [weak self] in
+                // The Settings window takes over, so do not hand activation
+                // back to the app that was frontmost before the Launchpad.
+                self?.close(restoringActivation: false)
+            }
+        ))
         hostingView.frame = blurView.bounds
         hostingView.autoresizingMask = [.width, .height]
         blurView.addSubview(hostingView)
@@ -96,7 +103,7 @@ public final class LaunchpadWindowController: NSObject {
         }
     }
 
-    public func close() {
+    public func close(restoringActivation: Bool = true) {
         guard isOpen, let window else {
             Diagnostics.log("close() skipped: not open")
             return
@@ -111,7 +118,9 @@ public final class LaunchpadWindowController: NSObject {
             Task { @MainActor in
                 window.orderOut(nil)
                 self.isConsumingGestures = false
-                self.restoreFrontmostApp()
+                if restoringActivation {
+                    self.restoreFrontmostApp()
+                }
             }
         }
     }
