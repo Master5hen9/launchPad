@@ -32,4 +32,75 @@ struct LaunchpadPagerTests {
         #expect(layout.rows >= 1)
         #expect(layout.itemsPerPage >= 1)
     }
+
+    @Test func slotIndexMapsCursorToNearestCell() {
+        let layout = LaunchpadPager.Layout(
+            columns: 5,
+            rows: 6,
+            cellWidth: 135,
+            cellHeight: 150,
+            rowSpacing: 18,
+            spacing: 20
+        )
+        let anchor = CGPoint(x: 48, y: 8)
+
+        // Center of column 1, row 0.
+        #expect(
+            LaunchpadPager.slotIndex(
+                at: CGPoint(x: 48 + 155 + 67, y: 8 + 75),
+                anchor: anchor,
+                layout: layout,
+                itemCountOnPage: 20
+            ) == 1
+        )
+        // Center of row 1, column 0.
+        #expect(
+            LaunchpadPager.slotIndex(
+                at: CGPoint(x: 48 + 67, y: 8 + 168 + 75),
+                anchor: anchor,
+                layout: layout,
+                itemCountOnPage: 20
+            ) == 5
+        )
+    }
+
+    @Test func slotIndexClampsToPageBoundsAndItemCount() {
+        let layout = LaunchpadPager.Layout(
+            columns: 5,
+            rows: 6,
+            cellWidth: 135,
+            cellHeight: 150,
+            rowSpacing: 18,
+            spacing: 20
+        )
+        let anchor = CGPoint(x: 48, y: 8)
+
+        // A slot beyond the items on the page clamps to the item count.
+        #expect(
+            LaunchpadPager.slotIndex(
+                at: CGPoint(x: 48 + 155 * 2 + 67, y: 8 + 168 * 3 + 75),
+                anchor: anchor,
+                layout: layout,
+                itemCountOnPage: 10
+            ) == 10
+        )
+        // Far outside the grid clamps to the bottom-right cell.
+        #expect(
+            LaunchpadPager.slotIndex(
+                at: CGPoint(x: 10_000, y: 10_000),
+                anchor: anchor,
+                layout: layout,
+                itemCountOnPage: 30
+            ) == 29
+        )
+        // An empty page has no insertable slot.
+        #expect(
+            LaunchpadPager.slotIndex(
+                at: CGPoint(x: 100, y: 100),
+                anchor: anchor,
+                layout: layout,
+                itemCountOnPage: 0
+            ) == 0
+        )
+    }
 }

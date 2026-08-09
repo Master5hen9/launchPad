@@ -9,6 +9,10 @@ struct SettingsView: View {
     @State private var loginItemInstalled = false
     @State private var loginItemStatus = ""
     @State private var accessibilityTrusted = AXIsProcessTrusted()
+    @State private var hiddenApps: [HiddenAppsStore.HiddenApp] = []
+    @State private var isRecordingHotkey = false
+    @State private var hotkeyRecorderMonitor: Any?
+    @State private var hotkeyRegistrationFailed = false
 
     var body: some View {
         Form {
@@ -22,6 +26,37 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                 Button("立即打开启动台") {
                     AppDelegate.shared?.launchpad.open()
+                }
+            }
+
+            Section("全局快捷键") {
+                Toggle("启用全局快捷键", isOn: Binding(
+                    get: { AppSettings.isGlobalHotkeyEnabled },
+                    set: { enabled in
+                        AppSettings.isGlobalHotkeyEnabled = enabled
+                        AppDelegate.shared?.updateGlobalHotkey()
+                        hotkeyRegistrationFailed = AppDelegate.shared?.hotkeyRegistrationFailed ?? false
+                    }
+                ))
+                HStack {
+                    Text("打开启动台的快捷键")
+                    Spacer()
+                    Button {
+                        startRecordingHotkey()
+                    } label: {
+                        Text(isRecordingHotkey ? "按下新组合键…" : hotkeyDisplay)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!AppSettings.isGlobalHotkeyEnabled)
+                }
+                if hotkeyRegistrationFailed {
+                    Text("快捷键注册失败，可能已被其他应用占用，请换一个组合。")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                } else {
+                    Text("默认 ⌘⇧空格。全局快捷键无需辅助功能权限，可在任何应用中唤起。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -59,13 +94,85 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section("隐藏的应用") {
+                if hiddenApps.isEmpty {
+                    Text("没有隐藏的应用。在启动台中长按图标进入抖动模式，点击 × 即可隐藏或卸载应用。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(hiddenApps) { app in
+                    HStack(spacing: 10) {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
+                            .resizable()
+                            .frame(width: 24, height: 24)
+                        Text(app.name)
+                        Spacer()
+                        Button("恢复") {
+                            HiddenAppsStore.restore(appID: app.id)
+                            hiddenApps = HiddenAppsStore.hiddenApps()
+                        }
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .frame(width: 440)
         .onAppear {
             loginItemInstalled = LoginItemInstaller.isInstalled()
             accessibilityTrusted = AXIsProcessTrusted()
+            hiddenApps = HiddenAppsStore.hiddenApps()
+            hotkeyRegistrationFailed = AppDelegate.shared?.hotkeyRegistrationFailed ?? false
         }
+        .onDisappear {
+            stopRecordingHotkey()
+        }
+    }
+
+    private var hotkeyDisplay: String {
+        let flags = NSEvent.ModifierFlags(rawValue: AppSettings.globalHotkeyModifiers)
+        var parts: [String] = []
+        if flags.contains(.control) { parts.append("⌃") }
+        if flags.contains(.option) { parts.append("⌥") }
+        if flags.contains(.shift) { parts.append("⇧") }
+        if flags.contains(.command) { parts.append("⌘") }
+        parts.append(AppSettings.globalHotkeyLabel)
+        return parts.joined()
+    }
+
+    /// Captures the next key press (with ⌘/⌥/⌃ held) as the global shortcut.
+    private func startRecordingHotkey() {
+        isRecordingHotkey = true
+        hotkeyRecorderMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard event.keyCode != 53 else { // Esc cancels
+                self.stopRecordingHotkey()
+                return nil
+            }
+            let required: NSEvent.ModifierFlags = [.command, .option, .control]
+            guard event.modifierFlags.intersection(required) != [] else {
+                return nil
+            }
+            AppSettings.globalHotkeyKeyCode = Int(event.keyCode)
+            AppSettings.globalHotkeyModifiers = event.modifierFlags.rawValue
+            if event.keyCode == 49 {
+                AppSettings.globalHotkeyLabel = "空格"
+            } else {
+                AppSettings.globalHotkeyLabel = event.charactersIgnoringModifiers?.uppercased()
+                    ?? "键\(event.keyCode)"
+            }
+            AppDelegate.shared?.updateGlobalHotkey()
+            self.hotkeyRegistrationFailed = AppDelegate.shared?.hotkeyRegistrationFailed ?? false
+            self.stopRecordingHotkey()
+            return nil
+        }
+    }
+
+    private func stopRecordingHotkey() {
+        if let hotkeyRecorderMonitor {
+            NSEvent.removeMonitor(hotkeyRecorderMonitor)
+        }
+        hotkeyRecorderMonitor = nil
+        isRecordingHotkey = false
     }
 
     private func openAccessibilitySettings() {

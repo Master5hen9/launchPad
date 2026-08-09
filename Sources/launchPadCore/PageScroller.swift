@@ -19,6 +19,7 @@ public final class PageScroller {
     private var isTracking = false
     private var gestureStartOffset: CGFloat = 0
     private var gestureAccumulatedDelta: CGFloat = 0
+    private var lastDragTranslation: CGFloat = 0
     private var recentDeltas: [(delta: CGFloat, time: TimeInterval)] = []
     private var animationTask: Task<Void, Never>?
 
@@ -51,6 +52,18 @@ public final class PageScroller {
         recentDeltas.removeAll()
     }
 
+    /// Keeps the current page when the item or page count changes, clamping to
+    /// the last valid page instead of jumping back to the first one.
+    public func normalize(pageCount newPageCount: Int) {
+        animationTask?.cancel()
+        pageCount = max(newPageCount, 1)
+        let clamped = min(max(pageIndex, 0), pageCount - 1)
+        pageIndex = clamped
+        offset = CGFloat(clamped) * pageWidth
+        isTracking = false
+        recentDeltas.removeAll()
+    }
+
     public func showNext() {
         jump(to: pageIndex + 1)
     }
@@ -61,6 +74,35 @@ public final class PageScroller {
 
     public func jump(to page: Int) {
         snap(toPage: page)
+    }
+
+    /// Starts an iPhone-style drag: the grid follows the pointer 1:1 while
+    /// dragging (with edge rubber-banding) and springs to the nearest page on
+    /// release, carrying the release velocity.
+    public func beginDrag() {
+        animationTask?.cancel()
+        isTracking = true
+        gestureStartOffset = offset
+        gestureAccumulatedDelta = 0
+        lastDragTranslation = 0
+        recentDeltas.removeAll()
+    }
+
+    public func updateDrag(translation: CGFloat, time: TimeInterval) {
+        guard isTracking else { return }
+        let delta = translation - lastDragTranslation
+        lastDragTranslation = translation
+        gestureAccumulatedDelta = translation
+        recordDelta(delta, time: time)
+        // Dragging right moves toward earlier pages, left toward later ones,
+        // matching the precise-scroll convention used by trackpads.
+        offset = rubberBanded(gestureStartOffset - gestureAccumulatedDelta)
+    }
+
+    public func endDrag() {
+        guard isTracking else { return }
+        isTracking = false
+        finishGesture()
     }
 
     private func handleScrollEvent(_ event: NSEvent) {

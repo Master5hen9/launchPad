@@ -3,5 +3,6 @@
 .swiftpm/
 xcuserdata/
 *.xcuserstate
-dist/
+dist/*
+!dist/build_dmg.sh
 *.dmg

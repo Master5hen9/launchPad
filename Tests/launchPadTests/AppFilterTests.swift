@@ -23,6 +23,20 @@ struct AppFilterTests {
         #expect(AppFilter.filter(apps, query: "音乐").map(\.name) == ["音乐"])
     }
 
+    @Test func filterMatchesPinyinFull() {
+        #expect(AppFilter.filter(apps, query: "yinyue").map(\.name) == ["音乐"])
+    }
+
+    @Test func filterMatchesPinyinInitials() {
+        #expect(AppFilter.filter(apps, query: "yy").map(\.name) == ["音乐"])
+        #expect(AppFilter.filter(apps, query: "s").map(\.name) == ["Safari"])
+    }
+
+    @Test func pinyinSearchStillRespectsEnglishNames() {
+        #expect(AppFilter.filter(apps, query: "safari").map(\.name) == ["Safari"])
+        #expect(AppFilter.filter(apps, query: "mail").map(\.name) == ["Mail"])
+    }
+
     @Test func filterWithNoMatchesReturnsEmpty() {
         #expect(AppFilter.filter(apps, query: "不存在").isEmpty)
     }

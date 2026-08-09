@@ -22,6 +22,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let launchpad = LaunchpadWindowController()
     private var pinchMonitor: PinchGestureMonitor?
     private var statusItem: NSStatusItem?
+    private let globalHotkeyManager = GlobalHotkeyManager.shared
+    /// Set when the configured shortcut is invalid or already claimed.
+    private(set) var hotkeyRegistrationFailed = false
+    private var directoryChangeObserver: (any NSObjectProtocol)?
+    private let onboardingWindowController = OnboardingWindowController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -29,8 +34,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         setupStatusItem()
         applyPinchGestureSetting()
+        showOnboardingIfNeeded()
+        updateGlobalHotkey()
+        AppDirectoryMonitor.shared.start()
+        directoryChangeObserver = NotificationCenter.default.addObserver(
+            forName: AppDirectoryMonitor.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                await AppCatalog.refresh()
+            }
+        }
+        // Warm the app list in the background so the first Launchpad open
+        // never shows the loading screen.
+        Task { @MainActor in
+            await AppCatalog.loadIfNeeded()
+        }
         NSLog("launchPad: 已启动;若四指聚拢被系统绑定(如搜索),请在 系统设置 → 触控板 → 更多手势 中改为「无」")
         handleLaunchArguments()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        AppDirectoryMonitor.shared.stop()
+        globalHotkeyManager.unregister()
+        if let directoryChangeObserver {
+            NotificationCenter.default.removeObserver(directoryChangeObserver)
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -42,15 +72,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppSettings.isPinchGestureEnabled = enabled
         if enabled {
             startPinchMonitor()
+            if !PinchGestureMonitor.isAccessibilityTrusted {
+                onboardingWindowController.open()
+            }
         } else {
             stopPinchMonitor()
         }
+    }
+
+    @objc func showOnboarding() {
+        onboardingWindowController.open()
     }
 
     private func applyPinchGestureSetting() {
         if AppSettings.isPinchGestureEnabled {
             startPinchMonitor()
         }
+    }
+
+    /// Shows the first-launch guide once; afterwards it is only available from
+    /// the menu-bar menu (or when the pinch setting is re-enabled without
+    /// Accessibility permission).
+    private func showOnboardingIfNeeded() {
+        guard !AppSettings.hasCompletedOnboarding else { return }
+        onboardingWindowController.open()
+    }
+
+    /// (Re)registers the global shortcut from the current settings. Called on
+    /// launch and whenever the user changes the shortcut in Settings.
+    func updateGlobalHotkey() {
+        guard AppSettings.isGlobalHotkeyEnabled else {
+            globalHotkeyManager.unregister()
+            hotkeyRegistrationFailed = false
+            return
+        }
+        let keyCode = UInt32(AppSettings.globalHotkeyKeyCode)
+        let modifiers = GlobalHotkeyManager.carbonModifiers(
+            from: AppSettings.globalHotkeyModifiers
+        )
+        hotkeyRegistrationFailed = !globalHotkeyManager.register(
+            keyCode: keyCode,
+            modifiers: modifiers
+        ) { [weak self] in
+            Task { @MainActor in
+                self?.launchpad.toggle()
+            }
+        }
+        NSLog(
+            "launchPad: 全局快捷键注册%@ (keyCode=%d modifiers=%d)",
+            hotkeyRegistrationFailed ? "失败" : "成功",
+            keyCode,
+            modifiers
+        )
     }
 
     private func startPinchMonitor() {
@@ -95,10 +168,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         openItem.target = self
         let settingsItem = NSMenuItem(title: "设置…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
+        let guideItem = NSMenuItem(title: "首次使用引导…", action: #selector(showOnboarding), keyEquivalent: "")
+        guideItem.target = self
         let quitItem = NSMenuItem(title: "退出 launchPad", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(openItem)
         menu.addItem(settingsItem)
+        menu.addItem(guideItem)
         menu.addItem(.separator())
         menu.addItem(quitItem)
         item.menu = menu

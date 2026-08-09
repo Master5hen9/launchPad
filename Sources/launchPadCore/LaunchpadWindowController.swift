@@ -6,7 +6,6 @@ import SwiftUI
 @MainActor
 public final class LaunchpadWindowController: NSObject {
     private var window: LaunchpadWindow?
-    private var escapeMonitor: Any?
     private var lastFrontmostApp: NSRunningApplication?
     private var previousFrontmostApp: NSRunningApplication?
     private(set) var isOpen = false
@@ -84,7 +83,6 @@ public final class LaunchpadWindowController: NSObject {
         self.window = window
         isOpen = true
         isConsumingGestures = true
-        installEscapeMonitor()
 
         window.alphaValue = 0
         window.orderFrontRegardless()
@@ -104,7 +102,6 @@ public final class LaunchpadWindowController: NSObject {
             return
         }
         isOpen = false
-        removeEscapeMonitor()
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
@@ -125,23 +122,6 @@ public final class LaunchpadWindowController: NSObject {
         } else {
             open()
         }
-    }
-
-    private func installEscapeMonitor() {
-        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.keyCode == 53 else { return event }
-            Task { @MainActor [weak self] in
-                self?.close()
-            }
-            return nil
-        }
-    }
-
-    private func removeEscapeMonitor() {
-        if let escapeMonitor {
-            NSEvent.removeMonitor(escapeMonitor)
-        }
-        escapeMonitor = nil
     }
 
     /// Hands activation back to the app that was frontmost before the

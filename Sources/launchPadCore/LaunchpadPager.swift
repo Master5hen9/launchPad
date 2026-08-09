@@ -52,4 +52,23 @@ public enum LaunchpadPager {
             Array(items[start..<min(start + itemsPerPage, items.count)])
         }
     }
+
+    /// Maps a point in page coordinates to the flat slot index (0-based within
+    /// the page) of the grid cell under it, using the top-left corner of the
+    /// page's first cell as the layout anchor. Empty areas map to the nearest
+    /// cell; slots beyond the page's current items clamp to the item count so
+    /// the drop still lands at a valid insertion point.
+    public static func slotIndex(
+        at pagePoint: CGPoint,
+        anchor: CGPoint,
+        layout: Layout,
+        itemCountOnPage: Int
+    ) -> Int {
+        guard itemCountOnPage > 0 else { return 0 }
+        let col = Int(round((pagePoint.x - anchor.x) / (layout.cellWidth + layout.spacing)))
+        let row = Int(round((pagePoint.y - anchor.y) / (layout.cellHeight + layout.rowSpacing)))
+        let clampedCol = min(max(col, 0), layout.columns - 1)
+        let clampedRow = min(max(row, 0), layout.rows - 1)
+        return min(clampedRow * layout.columns + clampedCol, itemCountOnPage)
+    }
 }
