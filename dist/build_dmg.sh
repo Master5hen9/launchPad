@@ -9,6 +9,12 @@ STAGING_DIR="$SCRIPT_DIR/staging"
 APP_PATH="$STAGING_DIR/launchPad.app"
 DMG_PATH="$SCRIPT_DIR/launchPad.dmg"
 
+# Version comes from an explicit override (used by release.sh), otherwise the
+# latest git tag, otherwise 0.1.0.
+DEFAULT_VERSION="$(cd "$ROOT_DIR" && git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
+VERSION="${VERSION:-${DEFAULT_VERSION:-0.1.0}}"
+BUILD_NUMBER="${BUILD_NUMBER:-1}"
+
 echo "==> Building release binary (product: launchPad)"
 (cd "$ROOT_DIR" && swift build -c release --product launchPad)
 
@@ -20,7 +26,7 @@ cp "$ROOT_DIR/.build/release/launchPad" "$APP_PATH/Contents/MacOS/launchPad"
 cp "$ROOT_DIR/Sources/launchPadCore/Resources/AppIcon.icns" "$APP_PATH/Contents/Resources/AppIcon.icns"
 printf 'APPL????' > "$APP_PATH/Contents/PkgInfo"
 
-cat > "$APP_PATH/Contents/Info.plist" <<'PLIST'
+cat > "$APP_PATH/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -38,9 +44,9 @@ cat > "$APP_PATH/Contents/Info.plist" <<'PLIST'
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>$VERSION</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$BUILD_NUMBER</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
 	<key>NSHighResolutionCapable</key>

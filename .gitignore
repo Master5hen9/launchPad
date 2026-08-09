@@ -5,4 +5,5 @@ xcuserdata/
 *.xcuserstate
 dist/*
 !dist/build_dmg.sh
+!dist/release.sh
 *.dmg

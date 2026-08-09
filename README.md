@@ -49,6 +49,14 @@ swift run launchPadTests
 
 说明:当前环境(仅有 Command Line Tools)下 `swift test` 无法发现 Swift Testing 测试,所以测试以可执行程序方式运行;安装完整 Xcode 后可直接使用 `swift test`。
 
+## 发布
+
+```sh
+bash dist/release.sh 0.2.0
+```
+
+一键完成:更新版本号 → 构建 DMG → 提交 → 打标签 → 推送 → 创建 GitHub Release(需 gh CLI 已登录,会自动把 DMG 作为附件上传)。
+
 ## 功能
 
 - 扫描 `/System/Applications`、`/Applications`、`~/Applications`,以及 Homebrew 的 `Caskroom` 和 `Cellar`(公式自带的 GUI 应用如 Python 的 IDLE 也会出现)
