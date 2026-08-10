@@ -178,6 +178,7 @@ public struct LaunchpadView: View {
                         .foregroundStyle(.white.opacity(0.75))
                 }
                 .buttonStyle(.plain)
+                .focusEffectDisabled()
             }
         }
         .padding(.horizontal, 18)
