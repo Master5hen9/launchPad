@@ -201,10 +201,16 @@ public struct LaunchpadView: View {
                     viewModel.category = category
                 } label: {
                     Text(category.localizedName)
-                        .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                        .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isSelected ? .black : .white.opacity(0.9))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 6)
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(.white)
+                            }
+                        }
                 }
                 .buttonStyle(.plain)
                 .focusEffectDisabled()
