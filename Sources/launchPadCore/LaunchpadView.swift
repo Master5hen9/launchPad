@@ -178,7 +178,6 @@ public struct LaunchpadView: View {
                         .foregroundStyle(.white.opacity(0.75))
                 }
                 .buttonStyle(.plain)
-                .focusEffectDisabled()
             }
         }
         .padding(.horizontal, 18)
@@ -202,18 +201,13 @@ public struct LaunchpadView: View {
                     viewModel.category = category
                 } label: {
                     Text(category.localizedName)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(isSelected ? .black : .white.opacity(0.9))
+                        .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background {
-                            if isSelected {
-                                Capsule()
-                                    .fill(.white)
-                            }
-                        }
+                        .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
+                .focusEffectDisabled()
             }
         }
         .padding(4)
