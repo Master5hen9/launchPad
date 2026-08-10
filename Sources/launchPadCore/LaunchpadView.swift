@@ -76,7 +76,7 @@ public struct LaunchpadView: View {
             VStack(spacing: 0) {
                 headerBar
                     .padding(.top, 64)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 10)
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.35), value: appeared)
 
@@ -356,7 +356,7 @@ public struct LaunchpadView: View {
         .padding(.horizontal, 48)
         .padding(.top, 8)
         .padding(.bottom, 48)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private func cell(for item: LaunchpadItem, index: Int, pageIndex: Int, layout: LaunchpadPager.Layout) -> some View {
