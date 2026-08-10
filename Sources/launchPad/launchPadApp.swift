@@ -178,7 +178,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
-            if let iconURL = AppAssets.iconURL,
+            if let statusIconURL = AppAssets.statusIconURL,
+               let icon = NSImage(contentsOf: statusIconURL) {
+                icon.size = NSSize(width: 18, height: 18)
+                // Render as a monochrome template so the status item follows
+                // the menu bar's black/white appearance like other icons.
+                icon.isTemplate = true
+                button.image = icon
+            } else if let iconURL = AppAssets.iconURL,
                let icon = NSImage(contentsOf: iconURL) {
                 icon.size = NSSize(width: 18, height: 18)
                 // Render as a monochrome template so the status item follows

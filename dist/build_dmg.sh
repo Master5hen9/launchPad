@@ -23,6 +23,7 @@ rm -rf "$STAGING_DIR"
 mkdir -p "$APP_PATH/Contents/MacOS" "$APP_PATH/Contents/Resources"
 
 cp "$ROOT_DIR/.build/release/launchPad" "$APP_PATH/Contents/MacOS/launchPad"
+cp -R "$ROOT_DIR/.build/release/launchPad_launchPadCore.bundle" "$APP_PATH/Contents/Resources/"
 cp "$ROOT_DIR/Sources/launchPadCore/Resources/AppIcon.icns" "$APP_PATH/Contents/Resources/AppIcon.icns"
 printf 'APPL????' > "$APP_PATH/Contents/PkgInfo"
 

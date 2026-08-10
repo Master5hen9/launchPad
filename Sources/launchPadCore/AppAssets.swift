@@ -6,4 +6,10 @@ public enum AppAssets {
     public static var iconURL: URL? {
         Bundle.module.url(forResource: "AppIcon", withExtension: "icns")
     }
+
+    /// The dedicated menu-bar icon (template PNG), embedded via the package
+    /// resources. Falls back to the app icon when missing.
+    public static var statusIconURL: URL? {
+        Bundle.module.url(forResource: "StatusIcon", withExtension: "png")
+    }
 }

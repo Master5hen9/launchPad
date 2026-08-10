@@ -4,6 +4,9 @@
 
 - `generate_icon.swift` — 用 AppKit 生成 1024×1024 的 Launchpad 风格图标:
   `swift Assets/generate_icon.swift` 会输出 `/tmp/appicon_1024.png`。
+- `generate_status_icon.swift` — 生成菜单栏用的简洁黑白 2×2 网格模板图标:
+  `swift Assets/generate_status_icon.swift` 会输出
+  `Sources/launchPadCore/Resources/StatusIcon.png`(36×36)。
 - `AppIcon.icns` — 打包进应用 bundle 的图标(由上面的 PNG 经 `sips` + `iconutil`
   生成,生成命令见下)。
 
