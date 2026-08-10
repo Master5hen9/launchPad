@@ -164,11 +164,11 @@ public struct LaunchpadView: View {
             categoryRow
         }
         .background {
-            Capsule()
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(.white.opacity(0.14))
         }
         .overlay {
-            Capsule()
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(.white.opacity(0.18))
         }
         .frame(width: 440)
@@ -210,10 +210,10 @@ public struct LaunchpadView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(isSelected ? .black : .white.opacity(0.9))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 8)
                         .background {
                             if isSelected {
-                                Capsule()
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
                                     .fill(.white)
                             }
                         }
@@ -222,7 +222,6 @@ public struct LaunchpadView: View {
                 .focusEffectDisabled()
             }
         }
-        .padding(2)
         .animation(.easeOut(duration: 0.15), value: viewModel.category)
     }
 
