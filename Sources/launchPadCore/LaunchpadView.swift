@@ -81,7 +81,7 @@ public struct LaunchpadView: View {
                     .animation(.easeOut(duration: 0.35), value: appeared)
 
                 categoryPicker
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 12)
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.35), value: appeared)
 
@@ -162,11 +162,11 @@ public struct LaunchpadView: View {
     private var searchBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 18, weight: .medium))
+                .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(.white.opacity(0.75))
             TextField("搜索应用", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 18))
+                .font(.system(size: 22))
                 .foregroundStyle(.white)
                 .tint(.white)
                 .focused($searchFocused)
@@ -181,7 +181,7 @@ public struct LaunchpadView: View {
             }
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 12)
+        .padding(.vertical, 16)
         .background {
             Capsule()
                 .fill(.white.opacity(0.14))
@@ -190,7 +190,7 @@ public struct LaunchpadView: View {
             Capsule()
                 .strokeBorder(.white.opacity(0.18))
         }
-        .frame(maxWidth: 420)
+        .frame(maxWidth: 500)
     }
 
     private var categoryPicker: some View {
