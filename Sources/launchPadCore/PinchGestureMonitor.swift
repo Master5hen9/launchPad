@@ -151,13 +151,25 @@ public final class PinchGestureMonitor {
     private func installEventTap() {
         guard eventTap == nil else { return }
 
-        // NSEventType.gesture (29) is not exposed as a public CGEventType, so
-        // build the mask from its raw value.
-        let gestureMask: CGEventMask = 1 << 29
+        // Cover every trackpad gesture event type so nothing can reach the
+        // system (Space switching, Mission Control, Show Desktop...) while the
+        // Launchpad is open. scrollWheel is intentionally excluded: the
+        // Launchpad needs it for paging.
+        let gestureTypes: [NSEvent.EventType] = [
+            .beginGesture, .endGesture, .rotate,
+            .gesture, .magnify, .swipe, .smartMagnify
+        ]
+        let gestureMask: CGEventMask = gestureTypes.reduce(CGEventMask(0)) {
+            $0 | (CGEventMask(1) << CGEventMask($1.rawValue))
+        }
         // Prefer an active tap so we can swallow gestures while the Launchpad
         // is open; fall back to listen-only if the system rejects it.
-        let tap = createEventTap(options: .defaultTap, gestureMask: gestureMask)
-            ?? createEventTap(options: .listenOnly, gestureMask: gestureMask)
+        var tapOptions: CGEventTapOptions = .defaultTap
+        var tap = createEventTap(options: .defaultTap, gestureMask: gestureMask)
+        if tap == nil {
+            tapOptions = .listenOnly
+            tap = createEventTap(options: .listenOnly, gestureMask: gestureMask)
+        }
         guard let tap else {
             Diagnostics.log("gesture tap: creation failed")
             return
@@ -168,7 +180,9 @@ public final class PinchGestureMonitor {
         eventTapSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        Diagnostics.log("gesture tap installed")
+        Diagnostics.log(
+            "gesture tap installed (\(tapOptions == .defaultTap ? "active" : "listen-only"))"
+        )
     }
 
     private func createEventTap(
@@ -210,11 +224,14 @@ public final class PinchGestureMonitor {
     private func handleTapEvent(_ event: CGEvent) -> Bool {
         guard let nsEvent = NSEvent(cgEvent: event) else { return false }
         forward(nsEvent, source: "tap")
-        guard isConsumingEnabled(),
-              nsEvent.allTouches().count >= PinchDetector.minimumTouchCount else {
-            return false
+        guard isConsumingEnabled() else { return false }
+        // While the Launchpad is open, swallow every trackpad gesture event so
+        // the system cannot act on it in the background. scrollWheel never
+        // reaches this tap (see installEventTap) and keeps paging the overlay.
+        let touches = nsEvent.allTouches().count
+        if touches >= 2 || !nsEvent.phase.isEmpty {
+            Diagnostics.log("gesture consumed (launchpad open)")
         }
-        Diagnostics.log("gesture consumed (launchpad open)")
         return true
     }
 
