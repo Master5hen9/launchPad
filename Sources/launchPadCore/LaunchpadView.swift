@@ -156,12 +156,14 @@ public struct LaunchpadView: View {
 
     private var navBar: some View {
         VStack(spacing: 0) {
+            Spacer(minLength: 8)
             searchRow
             Rectangle()
                 .fill(.white.opacity(0.18))
                 .frame(height: 1)
                 .padding(.horizontal, 18)
             categoryRow
+            Spacer(minLength: 8)
         }
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -171,8 +173,11 @@ public struct LaunchpadView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(.white.opacity(0.18))
         }
-        .frame(width: 440)
+        .frame(width: 440, height: 440 / Self.goldenRatio)
     }
+
+    /// Width-to-height ratio of the nav bar: the golden ratio (≈ 1.618).
+    private static let goldenRatio: CGFloat = (1 + sqrt(5)) / 2
 
     private var searchRow: some View {
         HStack(spacing: 10) {
