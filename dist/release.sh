@@ -4,7 +4,8 @@
 # Usage: bash dist/release.sh [X.Y.Z]
 #
 # Steps: bump the app version -> build the DMG -> commit everything -> tag ->
-# push -> create a GitHub Release with the DMG attached.
+# push. The pushed tag triggers the GitHub Actions release workflow, which
+# builds the DMG again in CI and creates the GitHub Release with the asset.
 #
 # Notes:
 # - All uncommitted changes in the working tree are committed with the release
@@ -57,7 +58,6 @@ else
     git commit -m "chore: release $TAG"
 fi
 
-PREV_TAG="$(git describe --tags --abbrev=0 HEAD 2>/dev/null || true)"
 echo "==> 打标签 $TAG"
 git tag -a "$TAG" -m "launchPad $VERSION"
 
@@ -65,18 +65,7 @@ echo "==> 推送 main 与标签"
 git push origin main
 git push origin "$TAG"
 
-if [[ -n "$PREV_TAG" ]]; then
-    NOTES="$(git log --oneline --no-merges "$PREV_TAG..HEAD")"
-else
-    NOTES="$(git log --oneline --no-merges | head -30)"
-fi
-NOTES+="
-
-安装: 打开 DMG，将 launchPad.app 拖入 Applications。
-首次使用需在 系统设置 → 隐私与安全性 → 辅助功能 中勾选 launchPad。"
-
-echo "==> 创建 GitHub Release"
 REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
-gh release create "$TAG" --title "launchPad $VERSION" --notes "$NOTES" dist/launchPad.dmg
 
+echo "==> 标签已推送;GitHub Actions 将自动构建 DMG 并创建 Release"
 echo "完成: https://github.com/$REPO/releases/tag/$TAG"

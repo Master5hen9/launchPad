@@ -57,6 +57,8 @@ bash dist/release.sh 0.2.0
 
 一键完成:更新版本号 → 构建 DMG → 提交 → 打标签 → 推送 → 创建 GitHub Release(需 gh CLI 已登录,会自动把 DMG 作为附件上传)。
 
+推送 `v*` 或 `lts` 标签后,仓库里的 GitHub Actions workflow 会自动构建 DMG 并创建 Release(见 `.github/workflows/release.yml`),本地只需打标签推送。
+
 ## 功能
 
 - 扫描 `/System/Applications`、`/Applications`、`~/Applications`,以及 Homebrew 的 `Caskroom` 和 `Cellar`(公式自带的 GUI 应用如 Python 的 IDLE 也会出现)
