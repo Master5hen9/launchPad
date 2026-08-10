@@ -74,7 +74,7 @@ public struct LaunchpadView: View {
                 .allowsHitTesting(false)
 
             VStack(spacing: 0) {
-                headerBar
+                navBar
                     .padding(.top, 64)
                     .padding(.bottom, 10)
                     .opacity(appeared ? 1 : 0)
@@ -154,7 +154,7 @@ public struct LaunchpadView: View {
 
     // MARK: - Search
 
-    private var headerBar: some View {
+    private var navBar: some View {
         VStack(spacing: 0) {
             searchRow
             Rectangle()
@@ -164,11 +164,11 @@ public struct LaunchpadView: View {
             categoryRow
         }
         .background {
-            Capsule()
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(.white.opacity(0.14))
         }
         .overlay {
-            Capsule()
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(.white.opacity(0.18))
         }
         .frame(width: 440)
@@ -213,7 +213,7 @@ public struct LaunchpadView: View {
                         .padding(.vertical, 8)
                         .background {
                             if isSelected {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(.white)
                             }
                         }
