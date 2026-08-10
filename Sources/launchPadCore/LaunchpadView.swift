@@ -75,7 +75,7 @@ public struct LaunchpadView: View {
 
             VStack(spacing: 0) {
                 headerBar
-                    .padding(.top, 48)
+                    .padding(.top, 64)
                     .padding(.bottom, 24)
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.35), value: appeared)
@@ -164,11 +164,11 @@ public struct LaunchpadView: View {
             categoryRow
         }
         .background {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            Capsule()
                 .fill(.white.opacity(0.14))
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            Capsule()
                 .strokeBorder(.white.opacity(0.18))
         }
         .frame(width: 440)
