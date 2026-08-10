@@ -190,7 +190,7 @@ public struct LaunchpadView: View {
             Capsule()
                 .strokeBorder(.white.opacity(0.18))
         }
-        .frame(maxWidth: 440)
+        .frame(width: 440)
     }
 
     private var categoryPicker: some View {
@@ -204,7 +204,7 @@ public struct LaunchpadView: View {
         .controlSize(.large)
         .accessibilityLabel(NSLocalizedString("分类", comment: "Category filter"))
         .tint(.white)
-        .frame(maxWidth: 440)
+        .frame(width: 440)
     }
 
     // MARK: - Content switching
