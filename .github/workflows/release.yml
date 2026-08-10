@@ -24,4 +24,10 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/launchPad.dmg
+        run: |
+          if [[ "$GITHUB_REF_NAME" == "lts" ]]; then
+            TITLE="launchPad LTS"
+          else
+            TITLE="launchPad ${GITHUB_REF_NAME#v}"
+          fi
+          gh release create "$GITHUB_REF_NAME" --title "$TITLE" --generate-notes dist/launchPad.dmg
