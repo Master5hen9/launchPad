@@ -8,7 +8,7 @@ public final class LaunchpadWindowController: NSObject {
     private var window: LaunchpadWindow?
     private var lastFrontmostApp: NSRunningApplication?
     private var previousFrontmostApp: NSRunningApplication?
-    private(set) var isOpen = false
+    public private(set) var isOpen = false
     /// True while the overlay is visible (including the brief close fade), so
     /// the gesture monitor swallows four-or-more-finger events and the system
     /// cannot fire its own bindings (Show Desktop, etc.) at the same time.

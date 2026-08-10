@@ -122,11 +122,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 let isFrontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
                     == Bundle.main.bundleIdentifier
-                if isFrontmost {
-                    // The global hotkey consumes Cmd+, before the app's own
-                    // key handling runs. When launchPad is frontmost (Launchpad
-                    // or Settings open), treat the press as "open Settings".
-                    NSLog("launchPad: hotkey frontmost, opening settings")
+                if isFrontmost, self.launchpad.isOpen, self.isCommaHotkey() {
+                    // A Cmd+, global hotkey consumes the press before the app's
+                    // own key handling runs. While the Launchpad overlay is up,
+                    // route it to Settings; otherwise it is a plain toggle.
+                    NSLog("launchPad: Cmd+, while launchpad open, opening settings")
                     self.launchpad.close(restoringActivation: false)
                     self.openSettings()
                 } else {
@@ -140,6 +140,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyCode,
             modifiers
         )
+    }
+
+    /// True when the configured global hotkey is plain `Cmd+,` (no Shift,
+    /// Option or Control), which collides with the Settings shortcut.
+    private func isCommaHotkey() -> Bool {
+        guard AppSettings.globalHotkeyKeyCode == 43 else { return false }
+        let flags = NSEvent.ModifierFlags(rawValue: AppSettings.globalHotkeyModifiers)
+        let required: NSEvent.ModifierFlags = [.command]
+        let disallowed: NSEvent.ModifierFlags = [.shift, .control, .option]
+        return flags.intersection(required) == required
+            && flags.intersection(disallowed).isEmpty
     }
 
     private func startPinchMonitor() {
