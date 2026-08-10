@@ -211,6 +211,7 @@ public struct LaunchpadView: View {
                         .foregroundStyle(isSelected ? .black : .white.opacity(0.9))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
+                        .contentShape(Rectangle())
                         .background {
                             if isSelected {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
