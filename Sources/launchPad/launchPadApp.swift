@@ -201,13 +201,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        let openItem = NSMenuItem(title: "打开启动台", action: #selector(openLaunchpad), keyEquivalent: "")
+        let openItem = NSMenuItem(
+            title: NSLocalizedString("打开启动台", comment: "Menu: open launchpad"),
+            action: #selector(openLaunchpad),
+            keyEquivalent: ""
+        )
         openItem.target = self
-        let settingsItem = NSMenuItem(title: "设置…", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(
+            title: NSLocalizedString("设置…", comment: "Menu: settings"),
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
         settingsItem.target = self
-        let guideItem = NSMenuItem(title: "首次使用引导…", action: #selector(showOnboarding), keyEquivalent: "")
+        let guideItem = NSMenuItem(
+            title: NSLocalizedString("首次使用引导…", comment: "Menu: onboarding guide"),
+            action: #selector(showOnboarding),
+            keyEquivalent: ""
+        )
         guideItem.target = self
-        let quitItem = NSMenuItem(title: "退出 launchPad", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(
+            title: NSLocalizedString("退出 launchPad", comment: "Menu: quit"),
+            action: #selector(quitApp),
+            keyEquivalent: "q"
+        )
         quitItem.target = self
         menu.addItem(openItem)
         menu.addItem(settingsItem)

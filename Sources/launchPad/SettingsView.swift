@@ -21,6 +21,10 @@ struct SettingsView: View {
                     .onChange(of: pinchGestureEnabled) { _, enabled in
                         AppDelegate.shared?.setPinchGestureEnabled(enabled)
                     }
+                Toggle("按最近使用排序", isOn: Binding(
+                    get: { AppSettings.isSortByRecentEnabled },
+                    set: { AppSettings.isSortByRecentEnabled = $0 }
+                ))
                 Text("若系统设置中「四指聚拢」绑定为搜索,请先在 系统设置 → 触控板 → 更多手势 中改为「无」。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -155,10 +159,13 @@ struct SettingsView: View {
             AppSettings.globalHotkeyKeyCode = Int(event.keyCode)
             AppSettings.globalHotkeyModifiers = event.modifierFlags.rawValue
             if event.keyCode == 49 {
-                AppSettings.globalHotkeyLabel = "空格"
+                AppSettings.globalHotkeyLabel = NSLocalizedString("空格", comment: "Hotkey label: space")
             } else {
                 AppSettings.globalHotkeyLabel = event.charactersIgnoringModifiers?.uppercased()
-                    ?? "键\(event.keyCode)"
+                    ?? String(
+                        format: NSLocalizedString("键%d", comment: "Hotkey label with key code"),
+                        event.keyCode
+                    )
             }
             AppDelegate.shared?.updateGlobalHotkey()
             self.hotkeyRegistrationFailed = AppDelegate.shared?.hotkeyRegistrationFailed ?? false
@@ -183,12 +190,15 @@ struct SettingsView: View {
     }
 
     private func installLoginItem() {
-        loginItemStatus = "正在安装…"
+        loginItemStatus = NSLocalizedString("正在安装…", comment: "Login item: installing")
         Task {
             do {
                 try LoginItemInstaller.install()
                 loginItemInstalled = true
-                loginItemStatus = "已安装,下次登录自动启动"
+                loginItemStatus = NSLocalizedString(
+                    "已安装,下次登录自动启动",
+                    comment: "Login item: installed"
+                )
             } catch {
                 loginItemInstalled = false
                 loginItemStatus = error.localizedDescription
@@ -197,12 +207,12 @@ struct SettingsView: View {
     }
 
     private func uninstallLoginItem() {
-        loginItemStatus = "正在卸载…"
+        loginItemStatus = NSLocalizedString("正在卸载…", comment: "Login item: removing")
         Task {
             do {
                 try LoginItemInstaller.uninstall()
                 loginItemInstalled = false
-                loginItemStatus = "已移除"
+                loginItemStatus = NSLocalizedString("已移除", comment: "Login item: removed")
             } catch {
                 loginItemInstalled = true
                 loginItemStatus = error.localizedDescription

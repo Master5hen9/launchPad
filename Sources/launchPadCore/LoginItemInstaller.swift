@@ -26,9 +26,13 @@ public enum LoginItemInstaller {
         public var errorDescription: String? {
             switch self {
             case .missingExecutable:
-                "找不到应用可执行文件。"
+                NSLocalizedString("找不到应用可执行文件。", comment: "Login item install error")
             case .commandFailed(let command, let output):
-                "\(command) 失败:\(output)"
+                String(
+                    format: NSLocalizedString("%@ 失败:%@", comment: "Command failed with output"),
+                    command,
+                    output
+                )
             }
         }
     }

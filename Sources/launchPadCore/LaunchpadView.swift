@@ -76,6 +76,11 @@ public struct LaunchpadView: View {
             VStack(spacing: 0) {
                 searchBar
                     .padding(.top, 48)
+                    .padding(.bottom, 12)
+                    .opacity(appeared ? 1 : 0)
+                    .animation(.easeOut(duration: 0.35), value: appeared)
+
+                categoryPicker
                     .padding(.bottom, 24)
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.35), value: appeared)
@@ -127,7 +132,10 @@ public struct LaunchpadView: View {
         } message: {
             Text("文件夹里的应用会移回启动台网格。")
         }
-        .alert("管理「\(appBeingManaged?.name ?? "")」", isPresented: manageAlertPresented) {
+        .alert(
+            Text(String(format: NSLocalizedString("管理「%@」", comment: ""), appBeingManaged?.name ?? "")),
+            isPresented: manageAlertPresented
+        ) {
             if let app = appBeingManaged {
                 if viewModel.canUninstall(app) {
                     Button("移到废纸篓", role: .destructive) {
@@ -183,6 +191,18 @@ public struct LaunchpadView: View {
                 .strokeBorder(.white.opacity(0.18))
         }
         .frame(maxWidth: 420)
+    }
+
+    private var categoryPicker: some View {
+        Picker("分类", selection: $viewModel.category) {
+            ForEach(AppCategory.allCases) { category in
+                Text(category.localizedName)
+                    .tag(category)
+            }
+        }
+        .pickerStyle(.segmented)
+        .tint(.white)
+        .frame(maxWidth: 380)
     }
 
     // MARK: - Content switching
@@ -742,9 +762,12 @@ public struct LaunchpadView: View {
     private var manageMessage: String {
         guard let app = appBeingManaged else { return "" }
         if viewModel.canUninstall(app) {
-            return "「\(app.name)」可移到废纸篓卸载，或从启动台隐藏。隐藏后可在「设置 → 隐藏的应用」中恢复。"
+            return String(
+                format: NSLocalizedString("「%@」可移到废纸篓卸载，或从启动台隐藏。隐藏后可在「设置 → 隐藏的应用」中恢复。", comment: ""),
+                app.name
+            )
         }
-        return "系统应用无法卸载，只能从启动台隐藏。隐藏后可在「设置 → 隐藏的应用」中恢复。"
+        return NSLocalizedString("系统应用无法卸载，只能从启动台隐藏。隐藏后可在「设置 → 隐藏的应用」中恢复。", comment: "")
     }
 
     private func enterJiggleMode() {

@@ -16,7 +16,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "launchPad 设置"
+            window.title = NSLocalizedString("launchPad 设置", comment: "Settings window title")
             window.isReleasedWhenClosed = false
             window.center()
             window.delegate = self

@@ -13,6 +13,13 @@ public enum AppSettings {
         set { defaultsStore.set(newValue, forKey: "pinchGestureEnabled") }
     }
 
+    /// When enabled, the grid is ordered by most recently launched instead of
+    /// the default/manual layout order.
+    public static var isSortByRecentEnabled: Bool {
+        get { defaultsStore.object(forKey: "sortByRecent") as? Bool ?? false }
+        set { defaultsStore.set(newValue, forKey: "sortByRecent") }
+    }
+
     /// Whether the first-launch onboarding guide has been seen (and dismissed
     /// or completed), so it does not pop up on every launch.
     public static var hasCompletedOnboarding: Bool {
@@ -44,7 +51,10 @@ public enum AppSettings {
 
     /// Human-readable key name captured at record time (e.g. "空格").
     public static var globalHotkeyLabel: String {
-        get { defaultsStore.string(forKey: "globalHotkeyLabel") ?? "空格" }
+        get {
+            defaultsStore.string(forKey: "globalHotkeyLabel")
+                ?? NSLocalizedString("空格", comment: "Hotkey label: space")
+        }
         set { defaultsStore.set(newValue, forKey: "globalHotkeyLabel") }
     }
 }

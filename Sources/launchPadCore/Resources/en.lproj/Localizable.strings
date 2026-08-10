@@ -1,0 +1,100 @@
+/* Settings: launchpad section */
+"启动台" = "Launchpad";
+"四指(或五指)聚拢打开" = "Open with a four- or five-finger pinch";
+"按最近使用排序" = "Sort by recently used";
+"若系统设置中「四指聚拢」绑定为搜索,请先在 系统设置 → 触控板 → 更多手势 中改为「无」。" = "If the four-finger pinch is bound to Search in System Settings, change it to None under Trackpad → More Gestures.";
+"立即打开启动台" = "Open Launchpad Now";
+
+/* Settings: global hotkey section */
+"全局快捷键" = "Global Hotkey";
+"启用全局快捷键" = "Enable global hotkey";
+"打开启动台的快捷键" = "Launchpad shortcut";
+"按下新组合键…" = "Press new shortcut…";
+"快捷键注册失败，可能已被其他应用占用，请换一个组合。" = "The shortcut could not be registered — it may already be used by another app. Try a different combination.";
+"默认 ⌘⇧空格。全局快捷键无需辅助功能权限，可在任何应用中唤起。" = "Default is ⌘⇧Space. The global hotkey works from any app without Accessibility permission.";
+
+/* Settings: accessibility section */
+"全局手势权限" = "Gesture Permission";
+"辅助功能已授权,后台手势监听已启用" = "Accessibility granted — background gesture listening is enabled";
+"后台四指聚拢唤醒需要「辅助功能」权限。请在系统设置中勾选 launchPad,授权后应用会自动启用全局监听。" = "Waking the Launchpad with a pinch requires Accessibility permission. Enable launchPad in System Settings and global listening turns on automatically.";
+"打开辅助功能设置" = "Open Accessibility Settings";
+"重新检测" = "Re-check";
+
+/* Settings: login item */
+"开机自启动" = "Launch at Login";
+"开机自动运行" = "Start automatically at login";
+"正在安装…" = "Installing…";
+"已安装,下次登录自动启动" = "Installed — starts automatically at next login";
+"正在卸载…" = "Removing…";
+"已移除" = "Removed";
+
+/* Settings: hidden apps */
+"隐藏的应用" = "Hidden Apps";
+"没有隐藏的应用。在启动台中长按图标进入抖动模式，点击 × 即可隐藏或卸载应用。" = "No hidden apps. In the Launchpad, long-press an icon to enter jiggle mode, then tap × to hide or remove an app.";
+"恢复" = "Restore";
+
+/* Hotkey label fragments */
+"空格" = "Space";
+"键%d" = "Key %d";
+
+/* Status bar menu */
+"打开启动台" = "Open Launchpad";
+"设置…" = "Settings…";
+"首次使用引导…" = "Getting Started…";
+"退出 launchPad" = "Quit launchPad";
+
+/* Settings window */
+"launchPad 设置" = "launchPad Settings";
+
+/* Onboarding */
+"开始使用" = "Get Started";
+"欢迎使用 launchPad" = "Welcome to launchPad";
+"把 macOS 26 移除的启动台带回来" = "Bringing back the Launchpad macOS 26 removed";
+"如何打开启动台" = "How to open the Launchpad";
+"四指或五指聚拢" = "Four- or five-finger pinch";
+"在触控板上聚拢手指打开，张开手指关闭" = "Pinch your fingers together on the trackpad to open, spread them to close";
+"菜单栏图标" = "Menu bar icon";
+"点击菜单栏的 launchPad 图标，从菜单中打开启动台" = "Click the launchPad icon in the menu bar and choose Open Launchpad";
+"后台手势权限" = "Gesture Permission";
+"辅助功能已授权，后台手势监听已启用" = "Accessibility granted — background gesture listening is enabled";
+"四指聚拢需要「辅助功能」权限才能在后台监听手势。点击下方按钮，在系统设置中勾选 launchPad，返回后本页会自动检测。" = "Listening for pinches in the background requires Accessibility permission. Click below, enable launchPad in System Settings, and this page detects it automatically when you return.";
+
+/* Launchpad grid */
+"搜索应用" = "Search apps";
+"分类" = "Category";
+"正在加载应用…" = "Loading apps…";
+"返回" = "Back";
+"重命名…" = "Rename…";
+"拖到其他应用上排序，拖到空白处移出文件夹" = "Drag onto another app to reorder, drag to empty space to move out of the folder";
+"启动" = "Open";
+"在 Finder 中显示" = "Show in Finder";
+"移出文件夹" = "Remove from Folder";
+"隐藏应用…" = "Hide App…";
+"打开" = "Open";
+"删除文件夹" = "Delete Folder";
+
+/* Alerts & dialogs */
+"重命名文件夹" = "Rename Folder";
+"文件夹名称" = "Folder name";
+"确定" = "OK";
+"取消" = "Cancel";
+"删除" = "Delete";
+"文件夹里的应用会移回启动台网格。" = "The apps inside will return to the Launchpad grid.";
+"管理「%@」" = "Manage “%@”";
+"移到废纸篓" = "Move to Trash";
+"隐藏应用" = "Hide App";
+"无法卸载" = "Cannot Remove";
+"好" = "OK";
+"「%@」可移到废纸篓卸载，或从启动台隐藏。隐藏后可在「设置 → 隐藏的应用」中恢复。" = "“%@” can be moved to the Trash, or hidden from the Launchpad. Hidden apps can be restored in Settings → Hidden Apps.";
+"系统应用无法卸载，只能从启动台隐藏。隐藏后可在「设置 → 隐藏的应用」中恢复。" = "System apps cannot be removed; they can only be hidden. Hidden apps can be restored in Settings → Hidden Apps.";
+
+/* Filters */
+"全部" = "All";
+"系统应用" = "System";
+"用户应用" = "User";
+"开发工具" = "Homebrew";
+
+/* Defaults & errors */
+"文件夹" = "Folder";
+"找不到应用可执行文件。" = "Cannot find the app executable.";
+"%@ 失败:%@" = "%@ failed: %@";

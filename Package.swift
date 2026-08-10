@@ -17,7 +17,8 @@ let package = Package(
             name: "launchPadCore",
             resources: [
                 .copy("Resources/AppIcon.icns"),
-                .copy("Resources/StatusIcon.png")
+                .copy("Resources/StatusIcon.png"),
+                .copy("Resources/en.lproj")
             ]
         ),
         .executableTarget(

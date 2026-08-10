@@ -11,7 +11,7 @@ DMG_PATH="$SCRIPT_DIR/launchPad.dmg"
 
 # Version comes from an explicit override (used by release.sh), otherwise the
 # latest git tag, otherwise 0.1.0.
-DEFAULT_VERSION="$(cd "$ROOT_DIR" && git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
+DEFAULT_VERSION="$(cd "$ROOT_DIR" && git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
 if [[ ! "$DEFAULT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     DEFAULT_VERSION="0.1.0"
 fi
@@ -28,6 +28,7 @@ mkdir -p "$APP_PATH/Contents/MacOS" "$APP_PATH/Contents/Resources"
 cp "$ROOT_DIR/.build/release/launchPad" "$APP_PATH/Contents/MacOS/launchPad"
 cp -R "$ROOT_DIR/.build/release/launchPad_launchPadCore.bundle" "$APP_PATH/Contents/Resources/"
 cp "$ROOT_DIR/Sources/launchPadCore/Resources/AppIcon.icns" "$APP_PATH/Contents/Resources/AppIcon.icns"
+cp -R "$ROOT_DIR/Sources/launchPadCore/Resources/en.lproj" "$APP_PATH/Contents/Resources/"
 printf 'APPL????' > "$APP_PATH/Contents/PkgInfo"
 
 cat > "$APP_PATH/Contents/Info.plist" <<PLIST

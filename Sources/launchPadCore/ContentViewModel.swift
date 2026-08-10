@@ -11,6 +11,7 @@ final class ContentViewModel {
     private(set) var openFolderID: String?
     private(set) var isLoading = false
     var searchText = ""
+    var category: AppCategory = .all
 
     private var layout = AppLayout()
     private var iconCache: [String: NSImage] = [:]
@@ -22,16 +23,33 @@ final class ContentViewModel {
 
     var filteredItems: [LaunchpadItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return items }
-        return items.filter { item in
+        let base = items.filter { item in
+            let matchesCategory: Bool
             switch item {
             case .app(let app):
-                !AppFilter.filter([app], query: searchText).isEmpty
+                matchesCategory = category.contains(app)
             case .folder(let folder):
-                folder.name.localizedCaseInsensitiveContains(query)
+                matchesCategory = folderAppRecords(folder).contains(where: category.contains)
+            }
+            guard matchesCategory else { return false }
+            guard !query.isEmpty else { return true }
+            switch item {
+            case .app(let app):
+                return !AppFilter.filter([app], query: searchText).isEmpty
+            case .folder(let folder):
+                return folder.name.localizedCaseInsensitiveContains(query)
                     || !AppFilter.filter(folderAppRecords(folder), query: searchText).isEmpty
             }
         }
+        guard AppSettings.isSortByRecentEnabled else { return base }
+        return base.enumerated().sorted { lhs, rhs in
+            let a = recentDate(for: lhs.element)
+            let b = recentDate(for: rhs.element)
+            if a != b {
+                return a > b
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
     }
 
     var openFolderInfo: (folder: LaunchpadFolder, apps: [AppRecord])? {
@@ -100,7 +118,7 @@ final class ContentViewModel {
         mutate { layout in
             AppLayout.makeFolder(
                 containing: [sourceAppID, targetAppID],
-                named: "文件夹",
+                named: NSLocalizedString("文件夹", comment: "Default folder name"),
                 at: targetAppID,
                 in: layout
             )
@@ -238,6 +256,7 @@ final class ContentViewModel {
     }
 
     func launch(_ app: AppRecord) {
+        RecentlyUsedStore.recordLaunch(appID: app.id)
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
         NSWorkspace.shared.openApplication(at: app.url, configuration: configuration) { _, error in
@@ -252,6 +271,19 @@ final class ContentViewModel {
     }
 
     // MARK: - Private
+
+    /// Recency used for "sort by recently used": an app's own last launch, or
+    /// a folder's most recently launched member.
+    private func recentDate(for item: LaunchpadItem) -> Date {
+        switch item {
+        case .app(let app):
+            RecentlyUsedStore.lastLaunched(appID: app.id) ?? .distantPast
+        case .folder(let folder):
+            folderAppRecords(folder)
+                .compactMap { RecentlyUsedStore.lastLaunched(appID: $0.id) }
+                .max() ?? .distantPast
+        }
+    }
 
     private func mutate(_ transform: (AppLayout) -> AppLayout) {
         layout = transform(layout)
