@@ -12,6 +12,9 @@ DMG_PATH="$SCRIPT_DIR/launchPad.dmg"
 # Version comes from an explicit override (used by release.sh), otherwise the
 # latest git tag, otherwise 0.1.0.
 DEFAULT_VERSION="$(cd "$ROOT_DIR" && git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
+if [[ ! "$DEFAULT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    DEFAULT_VERSION="0.1.0"
+fi
 VERSION="${VERSION:-${DEFAULT_VERSION:-0.1.0}}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
 
