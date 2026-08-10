@@ -74,14 +74,9 @@ public struct LaunchpadView: View {
                 .allowsHitTesting(false)
 
             VStack(spacing: 0) {
-                searchBar
+                headerBar
                     .padding(.top, 48)
-                    .padding(.bottom, 12)
-                    .opacity(appeared ? 1 : 0)
-                    .animation(.easeOut(duration: 0.35), value: appeared)
-
-                categoryPicker
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 24)
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.35), value: appeared)
 
@@ -159,7 +154,27 @@ public struct LaunchpadView: View {
 
     // MARK: - Search
 
-    private var searchBar: some View {
+    private var headerBar: some View {
+        VStack(spacing: 0) {
+            searchRow
+            Rectangle()
+                .fill(.white.opacity(0.18))
+                .frame(height: 1)
+                .padding(.horizontal, 18)
+            categoryRow
+        }
+        .background {
+            Capsule()
+                .fill(.white.opacity(0.14))
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.18))
+        }
+        .frame(width: 440)
+    }
+
+    private var searchRow: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 20, weight: .medium))
@@ -181,19 +196,10 @@ public struct LaunchpadView: View {
             }
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .background {
-            Capsule()
-                .fill(.white.opacity(0.14))
-        }
-        .overlay {
-            Capsule()
-                .strokeBorder(.white.opacity(0.18))
-        }
-        .frame(width: 440)
+        .padding(.vertical, 12)
     }
 
-    private var categoryPicker: some View {
+    private var categoryRow: some View {
         HStack(spacing: 0) {
             ForEach(AppCategory.allCases) { category in
                 let isSelected = viewModel.category == category
@@ -216,17 +222,8 @@ public struct LaunchpadView: View {
                 .focusEffectDisabled()
             }
         }
-        .padding(4)
-        .background {
-            Capsule()
-                .fill(.white.opacity(0.14))
-                .overlay {
-                    Capsule()
-                        .strokeBorder(.white.opacity(0.18))
-                }
-        }
+        .padding(2)
         .animation(.easeOut(duration: 0.15), value: viewModel.category)
-        .frame(width: 440)
     }
 
     // MARK: - Content switching
