@@ -214,7 +214,10 @@ public struct LaunchpadView: View {
                         .contentShape(Rectangle())
                         .background {
                             if isSelected {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                NavSegmentFill(
+                                    roundLeftCorner: category == .all,
+                                    roundRightCorner: category == .homebrew
+                                )
                                     .fill(.white)
                             }
                         }
@@ -1215,4 +1218,40 @@ private struct JiggleModifier: ViewModifier {
 private enum DragEdgeZone: Equatable {
     case left
     case right
+}
+
+/// Fill for the selected nav-bar segment: rounded only on the outer bottom
+/// corner(s) that touch the nav bar's own curve; square on the top (against
+/// the separator) and on the inner edges, so it spans the segment edge to
+/// edge without notches.
+private struct NavSegmentFill: Shape {
+    var roundLeftCorner: Bool
+    var roundRightCorner: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let radius: CGFloat = 12
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        if roundRightCorner {
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - radius))
+            path.addQuadCurve(
+                to: CGPoint(x: rect.maxX - radius, y: rect.maxY),
+                control: CGPoint(x: rect.maxX, y: rect.maxY)
+            )
+        } else {
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        }
+        if roundLeftCorner {
+            path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
+            path.addQuadCurve(
+                to: CGPoint(x: rect.minX, y: rect.maxY - radius),
+                control: CGPoint(x: rect.minX, y: rect.maxY)
+            )
+        } else {
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        }
+        path.closeSubpath()
+        return path
+    }
 }
