@@ -32,6 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppDelegate.shared = self
         // Run as a menu-bar app: no Dock icon, just the status item.
         NSApp.setActivationPolicy(.accessory)
+        launchpad.onOpenSettings = { [weak self] in
+            self?.openSettings()
+        }
         setupStatusItem()
         applyPinchGestureSetting()
         showOnboardingIfNeeded()
@@ -115,7 +118,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             modifiers: modifiers
         ) { [weak self] in
             Task { @MainActor in
-                self?.launchpad.toggle()
+                guard let self else { return }
+                let isFrontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                    == Bundle.main.bundleIdentifier
+                if isFrontmost {
+                    // The global hotkey consumes Cmd+, before the app's own
+                    // key handling runs. When launchPad is frontmost (Launchpad
+                    // or Settings open), treat the press as "open Settings".
+                    NSLog("launchPad: hotkey frontmost, opening settings")
+                    self.launchpad.close(restoringActivation: false)
+                    self.openSettings()
+                } else {
+                    self.launchpad.toggle()
+                }
             }
         }
         NSLog(

@@ -106,6 +106,7 @@ public final class GlobalHotkeyManager: @unchecked Sendable {
     }
 
     private func dispatchTrigger() {
+        Diagnostics.log("GLOBAL HOTKEY TRIGGERED")
         lock.lock()
         let trigger = onTrigger
         lock.unlock()

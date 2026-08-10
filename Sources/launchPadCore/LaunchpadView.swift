@@ -593,10 +593,12 @@ public struct LaunchpadView: View {
         }
         switch event.keyCode {
         case 43 where event.modifierFlags.contains(.command): // Cmd+, → Settings
-            // Keep the event so the app menu can open Settings; just dismiss
-            // the overlay first.
+            // Consume the event and let the window controller open Settings
+            // explicitly; the app menu's key equivalent does not reliably
+            // reach Settings while the overlay is up.
+            Diagnostics.log("CMD+, intercepted by launchpad view")
             onOpenSettings()
-            return event
+            return nil
         case 53: // Esc
             if isJiggleMode {
                 exitJiggleMode()

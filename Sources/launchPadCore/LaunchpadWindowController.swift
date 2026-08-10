@@ -13,6 +13,10 @@ public final class LaunchpadWindowController: NSObject {
     /// the gesture monitor swallows four-or-more-finger events and the system
     /// cannot fire its own bindings (Show Desktop, etc.) at the same time.
     public private(set) var isConsumingGestures = false
+    /// Invoked after the overlay has closed because the user requested
+    /// Settings (Cmd+,). Set by the app delegate so opening Settings does not
+    /// depend on the app menu's key-equivalent routing.
+    public var onOpenSettings: (() -> Void)?
 
     override public init() {
         super.init()
@@ -77,9 +81,11 @@ public final class LaunchpadWindowController: NSObject {
                 self?.close()
             },
             onOpenSettings: { [weak self] in
+                guard let self else { return }
                 // The Settings window takes over, so do not hand activation
                 // back to the app that was frontmost before the Launchpad.
-                self?.close(restoringActivation: false)
+                self.close(restoringActivation: false)
+                self.onOpenSettings?()
             }
         ))
         hostingView.frame = blurView.bounds
