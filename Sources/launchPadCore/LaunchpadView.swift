@@ -194,7 +194,7 @@ public struct LaunchpadView: View {
     }
 
     private var categoryPicker: some View {
-        Picker("分类", selection: $viewModel.category) {
+        Picker("", selection: $viewModel.category) {
             ForEach(AppCategory.allCases) { category in
                 Text(category.localizedName)
                     .tag(category)
@@ -202,8 +202,9 @@ public struct LaunchpadView: View {
         }
         .pickerStyle(.segmented)
         .controlSize(.large)
+        .accessibilityLabel(NSLocalizedString("分类", comment: "Category filter"))
         .tint(.white)
-        .frame(maxWidth: 480)
+        .frame(maxWidth: 440)
     }
 
     // MARK: - Content switching
