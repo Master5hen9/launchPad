@@ -16,7 +16,7 @@ NSColor.black.set()
 // Outer rounded-square frame.
 let frameRect = NSRect(x: 5, y: 5, width: 26, height: 26)
 let framePath = NSBezierPath(roundedRect: frameRect, xRadius: 6.5, yRadius: 6.5)
-framePath.lineWidth = 3
+framePath.lineWidth = 2
 framePath.stroke()
 
 // 2×2 grid of rounded squares inside the frame.
