@@ -194,16 +194,10 @@ public struct LaunchpadView: View {
     }
 
     private var categoryPicker: some View {
-        Picker("", selection: $viewModel.category) {
-            ForEach(AppCategory.allCases) { category in
-                Text(category.localizedName)
-                    .tag(category)
-            }
-        }
-        .pickerStyle(.segmented)
-        .controlSize(.large)
-        .accessibilityLabel(NSLocalizedString("分类", comment: "Category filter"))
-        .tint(.white)
+        FullWidthSegmentedPicker(
+            selection: $viewModel.category,
+            categories: AppCategory.allCases
+        )
         .frame(width: 440)
     }
 
@@ -1196,4 +1190,49 @@ private struct JiggleModifier: ViewModifier {
 private enum DragEdgeZone: Equatable {
     case left
     case right
+}
+
+/// A native segmented control whose segments stretch to fill the proposed
+/// width, so the category filter lines up with the search bar above it.
+private struct FullWidthSegmentedPicker: NSViewRepresentable {
+    @Binding var selection: AppCategory
+    let categories: [AppCategory]
+
+    func makeNSView(context: Context) -> NSSegmentedControl {
+        let control = NSSegmentedControl(
+            labels: categories.map(\.localizedName),
+            trackingMode: .selectOne,
+            target: context.coordinator,
+            action: #selector(Coordinator.selectionChanged(_:))
+        )
+        control.segmentDistribution = .fillEqually
+        control.segmentStyle = .rounded
+        control.controlSize = .large
+        control.appearance = NSAppearance(named: .darkAqua)
+        control.selectedSegment = categories.firstIndex(of: selection) ?? 0
+        return control
+    }
+
+    func updateNSView(_ control: NSSegmentedControl, context: Context) {
+        control.segmentDistribution = .fillEqually
+        if let index = categories.firstIndex(of: selection), control.selectedSegment != index {
+            control.selectedSegment = index
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    final class Coordinator: NSObject {
+        private var parent: FullWidthSegmentedPicker
+
+        init(_ parent: FullWidthSegmentedPicker) {
+            self.parent = parent
+        }
+
+        @objc func selectionChanged(_ sender: NSSegmentedControl) {
+            parent.selection = parent.categories[sender.selectedSegment]
+        }
+    }
 }
