@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var hotkeyRegistrationFailed = false
     private var directoryChangeObserver: (any NSObjectProtocol)?
     private let onboardingWindowController = OnboardingWindowController()
+    private let settingsWindowController = SettingsWindowController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -201,8 +202,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        settingsWindowController.open()
     }
 
     @objc private func quitApp() {
@@ -216,6 +216,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             installOrUninstallLoginItem(installing: false)
         } else if CommandLine.arguments.contains("--show") {
             launchpad.open()
+        } else if CommandLine.arguments.contains("--open-settings") {
+            openSettings()
         }
     }
 
