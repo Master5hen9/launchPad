@@ -6,6 +6,7 @@ import SwiftUI
 public struct LaunchpadView: View {
     private let onDismiss: () -> Void
     private let onOpenSettings: () -> Void
+    private let screenSize: CGSize
     @State private var viewModel = ContentViewModel()
     @State private var appeared = false
     @State private var scroller = PageScroller()
@@ -38,10 +39,12 @@ public struct LaunchpadView: View {
 
     public init(
         onDismiss: @escaping () -> Void,
-        onOpenSettings: @escaping () -> Void = {}
+        onOpenSettings: @escaping () -> Void = {},
+        screenSize: CGSize? = nil
     ) {
         self.onDismiss = onDismiss
         self.onOpenSettings = onOpenSettings
+        self.screenSize = screenSize ?? NSScreen.main?.frame.size ?? CGSize(width: 1470, height: 956)
     }
 
     public var body: some View {
@@ -156,12 +159,14 @@ public struct LaunchpadView: View {
 
     private var navBar: some View {
         VStack(spacing: 0) {
+            Spacer(minLength: 8)
             searchRow
             Rectangle()
                 .fill(.white.opacity(0.18))
                 .frame(height: 1)
                 .padding(.horizontal, 18)
             categoryRow
+            Spacer(minLength: 8)
         }
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -171,7 +176,14 @@ public struct LaunchpadView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(.white.opacity(0.18))
         }
-        .frame(width: 440)
+        .frame(width: 440, height: navBarHeight)
+    }
+
+    /// Height that keeps the nav bar's aspect ratio identical to the screen's,
+    /// at a fixed width of 440.
+    private var navBarHeight: CGFloat {
+        guard screenSize.width > 0 else { return 78 }
+        return 440 * screenSize.height / screenSize.width
     }
 
     private var searchRow: some View {

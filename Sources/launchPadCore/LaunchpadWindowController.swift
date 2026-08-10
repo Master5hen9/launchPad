@@ -86,7 +86,8 @@ public final class LaunchpadWindowController: NSObject {
                 // back to the app that was frontmost before the Launchpad.
                 self.close(restoringActivation: false)
                 self.onOpenSettings?()
-            }
+            },
+            screenSize: screen.frame.size
         ))
         hostingView.frame = blurView.bounds
         hostingView.autoresizingMask = [.width, .height]
