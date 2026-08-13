@@ -76,7 +76,7 @@ public enum LoginItemInstaller {
             "CFBundleExecutable": appName,
             "CFBundleIconFile": "AppIcon",
             "CFBundlePackageType": "APPL",
-            "CFBundleShortVersionString": "0.3.0",
+            "CFBundleShortVersionString": "0.3.1",
             "CFBundleVersion": "1",
             "LSMinimumSystemVersion": "26.0",
             "NSHighResolutionCapable": true

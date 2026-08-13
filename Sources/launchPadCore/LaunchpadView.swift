@@ -78,7 +78,9 @@ public struct LaunchpadView: View {
                     .padding(.top, 64)
                     .padding(.bottom, 10)
                     .opacity(appeared ? 1 : 0)
-                    .animation(.easeOut(duration: 0.35), value: appeared)
+                    .offset(y: appeared ? 0 : -18)
+                    .scaleEffect(appeared ? 1 : 0.96)
+                    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: appeared)
 
                 content
             }
