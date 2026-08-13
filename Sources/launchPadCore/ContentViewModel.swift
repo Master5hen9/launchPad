@@ -176,12 +176,12 @@ final class ContentViewModel {
 
     // MARK: - Artwork
 
-    func artwork(for item: LaunchpadItem) -> NSImage {
+    func artwork(for item: LaunchpadItem, isDark: Bool, highlight: String) -> NSImage {
         switch item {
         case .app(let app):
-            cellImage(for: app)
+            cellImage(for: app, isDark: isDark, highlight: highlight)
         case .folder(let folder):
-            folderImage(for: folder)
+            folderImage(for: folder, isDark: isDark, highlight: highlight)
         }
     }
 
@@ -198,27 +198,38 @@ final class ContentViewModel {
     /// A single pre-rendered image for an app cell (icon + label + shadows),
     /// baked at high resolution so the entrance animation only moves one layer
     /// per cell instead of re-rendering a view tree every frame.
-    func cellImage(for app: AppRecord) -> NSImage {
-        if let cached = cellCache[app.id] {
+    func cellImage(for app: AppRecord, isDark: Bool, highlight: String = "") -> NSImage {
+        let cacheKey = "\(app.id)|\(isDark)|\(highlight)"
+        if let cached = cellCache[cacheKey] {
             return cached
         }
-        let content = LaunchpadCellArtwork(icon: icon(for: app), name: app.name)
+        let content = LaunchpadCellArtwork(
+            icon: icon(for: app),
+            name: app.name,
+            isDark: isDark,
+            highlight: highlight
+        )
         let renderer = ImageRenderer(content: content)
         renderer.scale = 3
         guard let image = renderer.nsImage else {
             return icon(for: app)
         }
-        cellCache[app.id] = image
+        cellCache[cacheKey] = image
         return image
     }
 
-    func folderImage(for folder: LaunchpadFolder) -> NSImage {
-        let key = "\(folder.id)|\(folder.name)|\(folder.appIDs.joined(separator: ","))"
+    func folderImage(for folder: LaunchpadFolder, isDark: Bool, highlight: String = "") -> NSImage {
+        let key = "\(folder.id)|\(folder.name)|\(folder.appIDs.joined(separator: ","))|\(isDark)|\(highlight)"
         if let cached = folderCache[key] {
             return cached
         }
         let icons = folderAppRecords(folder).prefix(4).map { icon(for: $0) }
-        let content = LaunchpadFolderArtwork(folder: folder, icons: Array(icons))
+        let content = LaunchpadFolderArtwork(
+            folder: folder,
+            icons: Array(icons),
+            isDark: isDark,
+            highlight: highlight
+        )
         let renderer = ImageRenderer(content: content)
         renderer.scale = 3
         guard let image = renderer.nsImage else {
@@ -268,6 +279,38 @@ final class ContentViewModel {
 
     func revealInFinder(_ app: AppRecord) {
         NSWorkspace.shared.activateFileViewerSelecting([app.url])
+    }
+
+    /// Looks up the app on the App Store (by bundle id) and opens its store
+    /// page. Non-App-Store apps simply do nothing.
+    func openAppStorePage(_ app: AppRecord) {
+        guard let bundleIdentifier = app.bundleIdentifier,
+              let url = URL(
+                  string: "https://itunes.apple.com/lookup?bundleId=\(bundleIdentifier)&country=cn"
+              )
+        else {
+            return
+        }
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                struct Lookup: Decodable {
+                    struct ResultItem: Decodable {
+                        let trackViewUrl: String?
+                    }
+                    let results: [ResultItem]
+                }
+                let lookup = try JSONDecoder().decode(Lookup.self, from: data)
+                guard let trackURL = lookup.results.first?.trackViewUrl.flatMap(URL.init(string:)) else {
+                    return
+                }
+                await MainActor.run {
+                    NSWorkspace.shared.open(trackURL)
+                }
+            } catch {
+                NSLog("launchPad: App Store lookup failed for %@: %@", app.name, error.localizedDescription)
+            }
+        }
     }
 
     // MARK: - Private
@@ -341,6 +384,8 @@ final class ContentViewModel {
 private struct LaunchpadCellArtwork: View {
     let icon: NSImage
     let name: String
+    let isDark: Bool
+    let highlight: String
 
     var body: some View {
         VStack(spacing: 8) {
@@ -348,17 +393,33 @@ private struct LaunchpadCellArtwork: View {
                 .resizable()
                 .frame(width: 76, height: 76)
                 .shadow(color: .black.opacity(0.35), radius: 7, y: 3)
-            Text(name)
+            Text(highlightedName)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(isDark ? .white : .black.opacity(0.85))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+                .shadow(color: .black.opacity(isDark ? 0.6 : 0.15), radius: 2, y: 1)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(width: 135, height: 150)
+    }
+
+    /// The app name with the search query range tinted, when it matches
+    /// literally. Pinyin-only matches keep the plain name.
+    private var highlightedName: AttributedString {
+        var attributed = AttributedString(name)
+        let query = highlight.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty,
+              let range = name.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]),
+              let attrRange = Range(range, in: attributed)
+        else {
+            return attributed
+        }
+        attributed[attrRange].backgroundColor = .yellow.opacity(0.55)
+        attributed[attrRange].foregroundColor = .black
+        return attributed
     }
 }
 
@@ -368,14 +429,16 @@ private struct LaunchpadCellArtwork: View {
 private struct LaunchpadFolderArtwork: View {
     let folder: LaunchpadFolder
     let icons: [NSImage]
+    let isDark: Bool
+    let highlight: String
 
     var body: some View {
         VStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white.opacity(0.12))
+                    .fill(isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.08))
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(.white.opacity(0.18))
+                    .strokeBorder(isDark ? Color.white.opacity(0.18) : Color.black.opacity(0.15))
                 if icons.isEmpty {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 36, weight: .medium))
@@ -386,17 +449,31 @@ private struct LaunchpadFolderArtwork: View {
             }
             .frame(width: 76, height: 76)
             .shadow(color: .black.opacity(0.35), radius: 7, y: 3)
-            Text(folder.name)
+            Text(highlightedName)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(isDark ? .white : .black.opacity(0.85))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+                .shadow(color: .black.opacity(isDark ? 0.6 : 0.15), radius: 2, y: 1)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(width: 135, height: 150)
+    }
+
+    private var highlightedName: AttributedString {
+        var attributed = AttributedString(folder.name)
+        let query = highlight.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty,
+              let range = folder.name.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]),
+              let attrRange = Range(range, in: attributed)
+        else {
+            return attributed
+        }
+        attributed[attrRange].backgroundColor = .yellow.opacity(0.55)
+        attributed[attrRange].foregroundColor = .black
+        return attributed
     }
 
     private var miniIconGrid: some View {

@@ -6,6 +6,7 @@ import SwiftUI
 public struct LaunchpadView: View {
     private let onDismiss: () -> Void
     private let onOpenSettings: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = ContentViewModel()
     @State private var appeared = false
     @State private var scroller = PageScroller()
@@ -16,6 +17,9 @@ public struct LaunchpadView: View {
     @State private var dragLocation: CGPoint = .zero
     @State private var dragEdgeZone: DragEdgeZone?
     @State private var isPagingDrag = false
+    /// Folder cell currently under the dragged item, shown as an enlarged
+    /// drop target.
+    @State private var dragHoverFolderID: String?
     /// Measured cell frames (item id → frame in its page's coordinate space).
     @State private var cellFrames: [String: CGRect] = [:]
     /// True once the main grid has been shown; returning from a folder should
@@ -44,9 +48,18 @@ public struct LaunchpadView: View {
         self.onOpenSettings = onOpenSettings
     }
 
+    // MARK: - Appearance
+
+    private var isDark: Bool { colorScheme == .dark }
+    private var primaryText: Color { isDark ? .white : .black }
+    private var secondaryText: Color { isDark ? .white.opacity(0.75) : .black.opacity(0.6) }
+    private var chromeFill: Color { isDark ? .white.opacity(0.14) : .black.opacity(0.10) }
+    private var chromeStroke: Color { isDark ? .white.opacity(0.18) : .black.opacity(0.16) }
+    private var overlayDim: Color { isDark ? .black.opacity(0.22) : .white.opacity(0.35) }
+
     public var body: some View {
         ZStack {
-            Color.black.opacity(0.22)
+            overlayDim
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -160,18 +173,18 @@ public struct LaunchpadView: View {
         VStack(spacing: 0) {
             searchRow
             Rectangle()
-                .fill(.white.opacity(0.18))
+                .fill(chromeStroke)
                 .frame(height: 1)
                 .padding(.horizontal, 18)
             categoryRow
         }
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.white.opacity(0.14))
+                .fill(chromeFill)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(.white.opacity(0.18))
+                .strokeBorder(chromeStroke)
         }
         .frame(width: 440)
     }
@@ -180,19 +193,19 @@ public struct LaunchpadView: View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(secondaryText)
             TextField("搜索应用", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 20))
-                .foregroundStyle(.white)
-                .tint(.white)
+                .foregroundStyle(primaryText)
+                .tint(primaryText)
                 .focused($searchFocused)
             if !viewModel.searchText.isEmpty {
                 Button {
                     viewModel.searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(secondaryText)
                 }
                 .buttonStyle(.plain)
             }
@@ -210,7 +223,7 @@ public struct LaunchpadView: View {
                 } label: {
                     Text(category.localizedName)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(isSelected ? .black : .white.opacity(0.9))
+                        .foregroundStyle(isSelected ? .black : secondaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .contentShape(Rectangle())
@@ -237,18 +250,19 @@ public struct LaunchpadView: View {
     private var content: some View {
         if viewModel.isLoading {
             ProgressView("正在加载应用…")
-                .tint(.white)
-                .foregroundStyle(.white)
+                .tint(primaryText)
+                .foregroundStyle(primaryText)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let info = viewModel.openFolderInfo {
             folderContent(info)
-                .transition(.opacity)
+                .transition(.scale(scale: 0.96).combined(with: .opacity))
         } else if viewModel.filteredItems.isEmpty {
             ContentUnavailableView.search(text: viewModel.searchText)
-                .foregroundStyle(.white)
+                .foregroundStyle(primaryText)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             pagedGrid
+                .transition(.scale(scale: 0.96).combined(with: .opacity))
         }
     }
 
@@ -257,7 +271,7 @@ public struct LaunchpadView: View {
             folder: info.folder,
             apps: viewModel.filteredOpenFolderApps,
             searchText: viewModel.searchText,
-            cellImage: { viewModel.cellImage(for: $0) },
+            cellImage: { viewModel.cellImage(for: $0, isDark: isDark, highlight: viewModel.searchText) },
             selectedAppID: selectedFolderAppID,
             onBack: {
                 withAnimation(.easeOut(duration: 0.18)) {
@@ -269,7 +283,10 @@ public struct LaunchpadView: View {
                 viewModel.launch(app)
                 onDismiss()
             },
-            onReveal: { viewModel.revealInFinder($0) },
+            onReveal: { app in
+                viewModel.revealInFinder(app)
+                onDismiss()
+            },
             onRemove: { viewModel.removeAppFromOpenFolder($0) },
             onMoveFolderApp: { dragged, target in
                 viewModel.moveFolderApp(dragged.id, before: target.id)
@@ -281,7 +298,8 @@ public struct LaunchpadView: View {
             isJiggleMode: isJiggleMode,
             onBeginJiggle: { enterJiggleMode() },
             onExitJiggle: { exitJiggleMode() },
-            onManageApp: { appBeingManaged = $0 }
+            onManageApp: { appBeingManaged = $0 },
+            onLookupAppStore: { viewModel.openAppStorePage($0) }
         )
     }
 
@@ -314,7 +332,7 @@ public struct LaunchpadView: View {
                     .padding(.bottom, 28)
 
                 if let draggedItem {
-                    Image(nsImage: viewModel.artwork(for: draggedItem))
+                    Image(nsImage: viewModel.artwork(for: draggedItem, isDark: isDark, highlight: viewModel.searchText))
                         .resizable()
                         .frame(width: 135, height: 150)
                         .scaleEffect(1.08)
@@ -375,15 +393,22 @@ public struct LaunchpadView: View {
         }
         return LaunchpadCell(
             item: item,
-            artwork: viewModel.artwork(for: item),
+            artwork: viewModel.artwork(for: item, isDark: isDark, highlight: viewModel.searchText),
             entranceDelay: popEntranceDelay(for: index, layout: layout),
             onPrimaryAction: { primaryAction(for: item) },
             onLaunch: { app in
                 viewModel.launch(app)
                 onDismiss()
             },
-            onReveal: { viewModel.revealInFinder($0) },
-            onOpenFolder: { viewModel.openFolder($0) },
+            onReveal: { app in
+                viewModel.revealInFinder(app)
+                onDismiss()
+            },
+            onOpenFolder: { folder in
+                withAnimation(.easeOut(duration: 0.18)) {
+                    viewModel.openFolder(folder)
+                }
+            },
             onBeginRename: { folder in
                 folderBeingRenamed = folder
                 renameDraft = folder.name
@@ -395,7 +420,9 @@ public struct LaunchpadView: View {
             isJiggleMode: isJiggleMode,
             jigglePhase: Double(index) * 0.6,
             onBeginJiggle: { enterJiggleMode() },
-            onManageApp: manageAction
+            onManageApp: manageAction,
+            onLookupAppStore: { viewModel.openAppStorePage($0) },
+            isDragTarget: dragHoverFolderID == item.id
         )
         .overlay(alignment: .topLeading) {
             GeometryReader { geo in
@@ -510,6 +537,12 @@ public struct LaunchpadView: View {
         }
         if draggedItem != nil {
             dragLocation = value.location
+            let hit = hitGrid(at: value.location, size: size, layout: layout, pageCount: pageCount, items: items)
+            if let item = hit.item, case .folder(let folder) = item {
+                dragHoverFolderID = folder.id
+            } else {
+                dragHoverFolderID = nil
+            }
             handleItemDragEdgePaging(value, size: size)
             return
         }
@@ -552,6 +585,7 @@ public struct LaunchpadView: View {
             draggedItem = nil
             dragEdgeZone = nil
             isPagingDrag = false
+            dragHoverFolderID = nil
         }
         if let dragged = draggedItem {
             let hit = hitGrid(at: value.location, size: size, layout: layout, pageCount: pageCount, items: items)
@@ -656,8 +690,19 @@ public struct LaunchpadView: View {
                 onDismiss()
             }
             return nil
-        case 123, 124: // left / right
-            moveSelection(dx: event.keyCode == 124 ? 1 : -1, dy: 0)
+        case 123, 124: // left / right (Cmd+←/→ pages, plain arrows move)
+            if event.modifierFlags.contains(.command) {
+                if event.keyCode == 124 {
+                    scroller.showNext()
+                } else {
+                    scroller.showPrevious()
+                }
+            } else {
+                moveSelection(dx: event.keyCode == 124 ? 1 : -1, dy: 0)
+            }
+            return nil
+        case 115, 119: // Home / End
+            scroller.jump(to: event.keyCode == 115 ? 0 : max(scroller.pageCount - 1, 0))
             return nil
         case 125, 126: // down / up
             moveSelection(dx: 0, dy: event.keyCode == 125 ? 1 : -1)
@@ -840,7 +885,11 @@ public struct LaunchpadView: View {
         HStack(spacing: 8) {
             ForEach(0..<pageCount, id: \.self) { page in
                 Circle()
-                    .fill(.white.opacity(scroller.pageIndex == page ? 0.95 : 0.35))
+                    .fill(
+                        isDark
+                            ? Color.white.opacity(scroller.pageIndex == page ? 0.95 : 0.35)
+                            : Color.black.opacity(scroller.pageIndex == page ? 0.85 : 0.35)
+                    )
                     .frame(width: 8, height: 8)
                     .onTapGesture {
                         scroller.jump(to: page)
@@ -858,6 +907,7 @@ public struct LaunchpadView: View {
 
 /// The folder screen: a header with back/rename plus the folder's app grid.
 private struct FolderView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let folder: LaunchpadFolder
     let apps: [AppRecord]
     let searchText: String
@@ -873,6 +923,11 @@ private struct FolderView: View {
     let onBeginJiggle: () -> Void
     let onExitJiggle: () -> Void
     let onManageApp: (AppRecord) -> Void
+    let onLookupAppStore: (AppRecord) -> Void
+
+    private var isDark: Bool { colorScheme == .dark }
+    private var primaryText: Color { isDark ? .white : .black }
+    private var secondaryText: Color { isDark ? .white.opacity(0.75) : .black.opacity(0.6) }
 
     @State private var draggedApp: AppRecord?
     @State private var dragLocation: CGPoint = .zero
@@ -897,28 +952,28 @@ private struct FolderView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(secondaryText)
                         .padding(.leading, 28)
 
                         Spacer()
 
                         Text(folder.name)
                             .font(.title2.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(primaryText)
                             .lineLimit(1)
 
                         Spacer()
 
                         Button("重命名…", action: { onRename(folder) })
                             .buttonStyle(.plain)
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(secondaryText)
                             .padding(.trailing, 28)
                     }
                     .padding(.top, 40)
 
                     if apps.isEmpty {
                         ContentUnavailableView.search(text: searchText)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(primaryText)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ScrollView {
@@ -940,7 +995,8 @@ private struct FolderView: View {
                                         isJiggleMode: isJiggleMode,
                                         jigglePhase: Double(index) * 0.6,
                                         onBeginJiggle: onBeginJiggle,
-                                        onManageApp: { onManageApp(app) }
+                                        onManageApp: { onManageApp(app) },
+                                        onLookupAppStore: { onLookupAppStore($0) }
                                     )
                                     .overlay(alignment: .topLeading) {
                                         GeometryReader { geo in
@@ -978,7 +1034,7 @@ private struct FolderView: View {
                 if draggedApp != nil {
                     Text("拖到其他应用上排序，拖到空白处移出文件夹")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primaryText)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background {
@@ -1046,6 +1102,7 @@ private struct FolderView: View {
 }
 
 private struct LaunchpadCell: View {
+    @Environment(\.colorScheme) private var colorScheme
     let item: LaunchpadItem
     let artwork: NSImage
     let entranceDelay: Double
@@ -1073,9 +1130,16 @@ private struct LaunchpadCell: View {
     var onBeginJiggle: (() -> Void)?
     /// Non-nil for apps: shows the manage badge and the hide/uninstall dialog.
     var onManageApp: (() -> Void)?
+    /// Opens the app's App Store page (looked up by bundle id).
+    var onLookupAppStore: ((AppRecord) -> Void)?
+    /// The cell is the folder currently under a dragged item: expand to hint
+    /// it can receive the drop.
+    var isDragTarget = false
 
     @State private var appeared = false
     @State private var isHovering = false
+
+    private var isDark: Bool { colorScheme == .dark }
 
     var body: some View {
         cellContent
@@ -1087,7 +1151,9 @@ private struct LaunchpadCell: View {
         let shouldShow = appeared || !animateEntrance
         // Grid cells pop from 55% (iPhone unlock), folder cells fade from 92%.
         let entranceScale: CGFloat = gentleEntrance ? 0.92 : 0.55
-        let scale = (!shouldShow ? entranceScale : 1) * (isHovering ? 1.05 : 1)
+        let scale = (!shouldShow ? entranceScale : 1)
+            * (isHovering ? 1.05 : 1)
+            * (isDragTarget ? 1.12 : 1)
         // The artwork is a single pre-rendered image (icon + label + shadows),
         // so the entrance animation moves one layer per cell — no per-frame
         // text layout or shadow rasterization.
@@ -1096,14 +1162,23 @@ private struct LaunchpadCell: View {
             .frame(width: 135, height: 150)
             .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.white.opacity(isHovering || isSelected ? 0.14 : 0))
+                    .fill(
+                        isDark
+                            ? Color.white.opacity(isHovering || isSelected ? 0.14 : 0)
+                            : Color.black.opacity(isHovering || isSelected ? 0.08 : 0)
+                    )
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(.white.opacity(isHovering || isSelected ? 0.22 : 0))
+                    .strokeBorder(
+                        isDark
+                            ? Color.white.opacity(isHovering || isSelected ? 0.22 : 0)
+                            : Color.black.opacity(isHovering || isSelected ? 0.18 : 0)
+                    )
             }
             .scaleEffect(scale)
             .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isHovering)
+            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isDragTarget)
             .animation(
                 gentleEntrance
                     ? .easeOut(duration: 0.25).delay(entranceDelay)
@@ -1133,6 +1208,24 @@ private struct LaunchpadCell: View {
             .onLongPressGesture(minimumDuration: 0.45) {
                 onBeginJiggle?()
             }
+            .overlay(alignment: .topTrailing) {
+                if case .folder(let folder) = item {
+                    Text("\(folder.appIDs.count)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background {
+                            Capsule()
+                                .fill(.black.opacity(0.6))
+                        }
+                        .overlay {
+                            Capsule()
+                                .strokeBorder(.white.opacity(0.25))
+                        }
+                        .padding(8)
+                }
+            }
 
         if isJiggleMode {
             artworkView
@@ -1151,6 +1244,15 @@ private struct LaunchpadCell: View {
                         }
                         Button("在 Finder 中显示") {
                             onReveal(app)
+                        }
+                        Button("复制应用名称") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(app.name, forType: .string)
+                        }
+                        if onLookupAppStore != nil {
+                            Button("在 App Store 中查看") {
+                                onLookupAppStore?(app)
+                            }
                         }
                         if let onRemoveFromFolder {
                             Button("移出文件夹", role: .destructive) {
