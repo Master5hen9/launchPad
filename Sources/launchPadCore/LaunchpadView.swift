@@ -1045,6 +1045,16 @@ private struct FolderView: View {
                         handleDragEnded(value)
                     }
             )
+            .onTapGesture {
+                // Empty-space click inside a folder goes back to the grid
+                // (or exits jiggle mode while jiggling). App cells have their
+                // own tap gestures and win on top of this one.
+                if isJiggleMode {
+                    onExitJiggle()
+                } else {
+                    onBack()
+                }
+            }
         }
     }
 
@@ -1139,7 +1149,7 @@ private struct LaunchpadCell: View {
         let entranceScale: CGFloat = gentleEntrance ? 0.92 : 0.55
         let scale = (!shouldShow ? entranceScale : 1)
             * (isHovering ? 1.05 : 1)
-            * (isDragTarget ? 1.12 : 1)
+            * (isDragTarget ? 1.18 : 1)
         // The artwork is a single pre-rendered image (icon + label + shadows),
         // so the entrance animation moves one layer per cell — no per-frame
         // text layout or shadow rasterization.
@@ -1148,11 +1158,13 @@ private struct LaunchpadCell: View {
             .frame(width: 135, height: 150)
             .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.white.opacity(isHovering || isSelected ? 0.14 : 0))
+                    .fill(.white.opacity(isHovering || isSelected || isDragTarget ? 0.14 : 0))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(.white.opacity(isHovering || isSelected ? 0.22 : 0))
+                    .strokeBorder(
+                        .white.opacity(isHovering || isSelected || isDragTarget ? 0.35 : 0)
+                    )
             }
             .scaleEffect(scale)
             .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isHovering)
