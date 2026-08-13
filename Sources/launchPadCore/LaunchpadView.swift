@@ -274,8 +274,12 @@ public struct LaunchpadView: View {
                 onDismiss()
             },
             onReveal: { app in
-                viewModel.revealInFinder(app)
                 onDismiss()
+                // Let the close animation run smoothly; Finder activation is
+                // expensive and would otherwise block the main thread mid-fade.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    viewModel.revealInFinder(app)
+                }
             },
             onRemove: { viewModel.removeAppFromOpenFolder($0) },
             onMoveFolderApp: { dragged, target in
@@ -391,8 +395,10 @@ public struct LaunchpadView: View {
                 onDismiss()
             },
             onReveal: { app in
-                viewModel.revealInFinder(app)
                 onDismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    viewModel.revealInFinder(app)
+                }
             },
             onOpenFolder: { folder in
                 withAnimation(.easeOut(duration: 0.18)) {
@@ -448,7 +454,9 @@ public struct LaunchpadView: View {
             // open (instead of on grid appear) keeps the first-open animation
             // guaranteed regardless of onAppear ordering.
             gridHasAppeared = true
-            viewModel.openFolder(folder)
+            withAnimation(.easeOut(duration: 0.18)) {
+                viewModel.openFolder(folder)
+            }
         }
     }
 
@@ -1177,24 +1185,6 @@ private struct LaunchpadCell: View {
             }
             .onLongPressGesture(minimumDuration: 0.45) {
                 onBeginJiggle?()
-            }
-            .overlay(alignment: .topTrailing) {
-                if case .folder(let folder) = item {
-                    Text("\(folder.appIDs.count)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background {
-                            Capsule()
-                                .fill(.black.opacity(0.6))
-                        }
-                        .overlay {
-                            Capsule()
-                                .strokeBorder(.white.opacity(0.25))
-                        }
-                        .padding(8)
-                }
             }
 
         if isJiggleMode {
