@@ -69,6 +69,7 @@ public final class LaunchpadWindowController: NSObject {
         window.hasShadow = false
         window.hidesOnDeactivate = false
         window.title = "launchPad"
+        window.appearance = NSAppearance(named: .darkAqua)
 
         let blurView = NSVisualEffectView()
         blurView.material = .fullScreenUI

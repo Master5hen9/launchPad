@@ -6,7 +6,6 @@ import SwiftUI
 public struct LaunchpadView: View {
     private let onDismiss: () -> Void
     private let onOpenSettings: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = ContentViewModel()
     @State private var appeared = false
     @State private var scroller = PageScroller()
@@ -48,18 +47,9 @@ public struct LaunchpadView: View {
         self.onOpenSettings = onOpenSettings
     }
 
-    // MARK: - Appearance
-
-    private var isDark: Bool { colorScheme == .dark }
-    private var primaryText: Color { isDark ? .white : .black }
-    private var secondaryText: Color { isDark ? .white.opacity(0.75) : .black.opacity(0.6) }
-    private var chromeFill: Color { isDark ? .white.opacity(0.14) : .black.opacity(0.10) }
-    private var chromeStroke: Color { isDark ? .white.opacity(0.18) : .black.opacity(0.16) }
-    private var overlayDim: Color { isDark ? .black.opacity(0.22) : .white.opacity(0.35) }
-
     public var body: some View {
         ZStack {
-            overlayDim
+            Color.black.opacity(0.22)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -173,18 +163,18 @@ public struct LaunchpadView: View {
         VStack(spacing: 0) {
             searchRow
             Rectangle()
-                .fill(chromeStroke)
+                .fill(.white.opacity(0.18))
                 .frame(height: 1)
                 .padding(.horizontal, 18)
             categoryRow
         }
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(chromeFill)
+                .fill(.white.opacity(0.14))
         }
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(chromeStroke)
+                .strokeBorder(.white.opacity(0.18))
         }
         .frame(width: 440)
     }
@@ -193,19 +183,19 @@ public struct LaunchpadView: View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(secondaryText)
+                .foregroundStyle(.white.opacity(0.75))
             TextField("搜索应用", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 20))
-                .foregroundStyle(primaryText)
-                .tint(primaryText)
+                .foregroundStyle(.white)
+                .tint(.white)
                 .focused($searchFocused)
             if !viewModel.searchText.isEmpty {
                 Button {
                     viewModel.searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(secondaryText)
+                        .foregroundStyle(.white.opacity(0.75))
                 }
                 .buttonStyle(.plain)
             }
@@ -223,7 +213,7 @@ public struct LaunchpadView: View {
                 } label: {
                     Text(category.localizedName)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(isSelected ? .black : secondaryText)
+                        .foregroundStyle(isSelected ? .black : .white.opacity(0.9))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .contentShape(Rectangle())
@@ -250,15 +240,15 @@ public struct LaunchpadView: View {
     private var content: some View {
         if viewModel.isLoading {
             ProgressView("正在加载应用…")
-                .tint(primaryText)
-                .foregroundStyle(primaryText)
+                .tint(.white)
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let info = viewModel.openFolderInfo {
             folderContent(info)
                 .transition(.scale(scale: 0.96).combined(with: .opacity))
         } else if viewModel.filteredItems.isEmpty {
             ContentUnavailableView.search(text: viewModel.searchText)
-                .foregroundStyle(primaryText)
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             pagedGrid
@@ -271,7 +261,7 @@ public struct LaunchpadView: View {
             folder: info.folder,
             apps: viewModel.filteredOpenFolderApps,
             searchText: viewModel.searchText,
-            cellImage: { viewModel.cellImage(for: $0, isDark: isDark, highlight: viewModel.searchText) },
+            cellImage: { viewModel.cellImage(for: $0, highlight: viewModel.searchText) },
             selectedAppID: selectedFolderAppID,
             onBack: {
                 withAnimation(.easeOut(duration: 0.18)) {
@@ -332,7 +322,7 @@ public struct LaunchpadView: View {
                     .padding(.bottom, 28)
 
                 if let draggedItem {
-                    Image(nsImage: viewModel.artwork(for: draggedItem, isDark: isDark, highlight: viewModel.searchText))
+                    Image(nsImage: viewModel.artwork(for: draggedItem, highlight: viewModel.searchText))
                         .resizable()
                         .frame(width: 135, height: 150)
                         .scaleEffect(1.08)
@@ -393,7 +383,7 @@ public struct LaunchpadView: View {
         }
         return LaunchpadCell(
             item: item,
-            artwork: viewModel.artwork(for: item, isDark: isDark, highlight: viewModel.searchText),
+            artwork: viewModel.artwork(for: item, highlight: viewModel.searchText),
             entranceDelay: popEntranceDelay(for: index, layout: layout),
             onPrimaryAction: { primaryAction(for: item) },
             onLaunch: { app in
@@ -885,11 +875,7 @@ public struct LaunchpadView: View {
         HStack(spacing: 8) {
             ForEach(0..<pageCount, id: \.self) { page in
                 Circle()
-                    .fill(
-                        isDark
-                            ? Color.white.opacity(scroller.pageIndex == page ? 0.95 : 0.35)
-                            : Color.black.opacity(scroller.pageIndex == page ? 0.85 : 0.35)
-                    )
+                    .fill(.white.opacity(scroller.pageIndex == page ? 0.95 : 0.35))
                     .frame(width: 8, height: 8)
                     .onTapGesture {
                         scroller.jump(to: page)
@@ -907,7 +893,6 @@ public struct LaunchpadView: View {
 
 /// The folder screen: a header with back/rename plus the folder's app grid.
 private struct FolderView: View {
-    @Environment(\.colorScheme) private var colorScheme
     let folder: LaunchpadFolder
     let apps: [AppRecord]
     let searchText: String
@@ -924,10 +909,6 @@ private struct FolderView: View {
     let onExitJiggle: () -> Void
     let onManageApp: (AppRecord) -> Void
     let onLookupAppStore: (AppRecord) -> Void
-
-    private var isDark: Bool { colorScheme == .dark }
-    private var primaryText: Color { isDark ? .white : .black }
-    private var secondaryText: Color { isDark ? .white.opacity(0.75) : .black.opacity(0.6) }
 
     @State private var draggedApp: AppRecord?
     @State private var dragLocation: CGPoint = .zero
@@ -952,28 +933,28 @@ private struct FolderView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(secondaryText)
+                        .foregroundStyle(.white.opacity(0.85))
                         .padding(.leading, 28)
 
                         Spacer()
 
                         Text(folder.name)
                             .font(.title2.weight(.semibold))
-                            .foregroundStyle(primaryText)
+                            .foregroundStyle(.white)
                             .lineLimit(1)
 
                         Spacer()
 
                         Button("重命名…", action: { onRename(folder) })
                             .buttonStyle(.plain)
-                            .foregroundStyle(secondaryText)
+                            .foregroundStyle(.white.opacity(0.85))
                             .padding(.trailing, 28)
                     }
                     .padding(.top, 40)
 
                     if apps.isEmpty {
                         ContentUnavailableView.search(text: searchText)
-                            .foregroundStyle(primaryText)
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ScrollView {
@@ -1034,7 +1015,7 @@ private struct FolderView: View {
                 if draggedApp != nil {
                     Text("拖到其他应用上排序，拖到空白处移出文件夹")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(primaryText)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background {
@@ -1102,7 +1083,6 @@ private struct FolderView: View {
 }
 
 private struct LaunchpadCell: View {
-    @Environment(\.colorScheme) private var colorScheme
     let item: LaunchpadItem
     let artwork: NSImage
     let entranceDelay: Double
@@ -1139,8 +1119,6 @@ private struct LaunchpadCell: View {
     @State private var appeared = false
     @State private var isHovering = false
 
-    private var isDark: Bool { colorScheme == .dark }
-
     var body: some View {
         cellContent
             .modifier(JiggleModifier(isJiggling: isJiggleMode, phase: jigglePhase))
@@ -1162,19 +1140,11 @@ private struct LaunchpadCell: View {
             .frame(width: 135, height: 150)
             .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        isDark
-                            ? Color.white.opacity(isHovering || isSelected ? 0.14 : 0)
-                            : Color.black.opacity(isHovering || isSelected ? 0.08 : 0)
-                    )
+                    .fill(.white.opacity(isHovering || isSelected ? 0.14 : 0))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(
-                        isDark
-                            ? Color.white.opacity(isHovering || isSelected ? 0.22 : 0)
-                            : Color.black.opacity(isHovering || isSelected ? 0.18 : 0)
-                    )
+                    .strokeBorder(.white.opacity(isHovering || isSelected ? 0.22 : 0))
             }
             .scaleEffect(scale)
             .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isHovering)

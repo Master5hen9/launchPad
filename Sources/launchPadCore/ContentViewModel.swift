@@ -176,12 +176,12 @@ final class ContentViewModel {
 
     // MARK: - Artwork
 
-    func artwork(for item: LaunchpadItem, isDark: Bool, highlight: String) -> NSImage {
+    func artwork(for item: LaunchpadItem, highlight: String) -> NSImage {
         switch item {
         case .app(let app):
-            cellImage(for: app, isDark: isDark, highlight: highlight)
+            cellImage(for: app, highlight: highlight)
         case .folder(let folder):
-            folderImage(for: folder, isDark: isDark, highlight: highlight)
+            folderImage(for: folder, highlight: highlight)
         }
     }
 
@@ -198,15 +198,14 @@ final class ContentViewModel {
     /// A single pre-rendered image for an app cell (icon + label + shadows),
     /// baked at high resolution so the entrance animation only moves one layer
     /// per cell instead of re-rendering a view tree every frame.
-    func cellImage(for app: AppRecord, isDark: Bool, highlight: String = "") -> NSImage {
-        let cacheKey = "\(app.id)|\(isDark)|\(highlight)"
+    func cellImage(for app: AppRecord, highlight: String = "") -> NSImage {
+        let cacheKey = "\(app.id)|\(highlight)"
         if let cached = cellCache[cacheKey] {
             return cached
         }
         let content = LaunchpadCellArtwork(
             icon: icon(for: app),
             name: app.name,
-            isDark: isDark,
             highlight: highlight
         )
         let renderer = ImageRenderer(content: content)
@@ -218,8 +217,8 @@ final class ContentViewModel {
         return image
     }
 
-    func folderImage(for folder: LaunchpadFolder, isDark: Bool, highlight: String = "") -> NSImage {
-        let key = "\(folder.id)|\(folder.name)|\(folder.appIDs.joined(separator: ","))|\(isDark)|\(highlight)"
+    func folderImage(for folder: LaunchpadFolder, highlight: String = "") -> NSImage {
+        let key = "\(folder.id)|\(folder.name)|\(folder.appIDs.joined(separator: ","))|\(highlight)"
         if let cached = folderCache[key] {
             return cached
         }
@@ -227,7 +226,6 @@ final class ContentViewModel {
         let content = LaunchpadFolderArtwork(
             folder: folder,
             icons: Array(icons),
-            isDark: isDark,
             highlight: highlight
         )
         let renderer = ImageRenderer(content: content)
@@ -384,7 +382,6 @@ final class ContentViewModel {
 private struct LaunchpadCellArtwork: View {
     let icon: NSImage
     let name: String
-    let isDark: Bool
     let highlight: String
 
     var body: some View {
@@ -395,11 +392,11 @@ private struct LaunchpadCellArtwork: View {
                 .shadow(color: .black.opacity(0.35), radius: 7, y: 3)
             Text(highlightedName)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(isDark ? .white : .black.opacity(0.85))
+                .foregroundStyle(.white)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .shadow(color: .black.opacity(isDark ? 0.6 : 0.15), radius: 2, y: 1)
+                .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -429,16 +426,15 @@ private struct LaunchpadCellArtwork: View {
 private struct LaunchpadFolderArtwork: View {
     let folder: LaunchpadFolder
     let icons: [NSImage]
-    let isDark: Bool
     let highlight: String
 
     var body: some View {
         VStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.08))
+                    .fill(Color.white.opacity(0.12))
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(isDark ? Color.white.opacity(0.18) : Color.black.opacity(0.15))
+                    .strokeBorder(.white.opacity(0.18))
                 if icons.isEmpty {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 36, weight: .medium))
@@ -451,11 +447,11 @@ private struct LaunchpadFolderArtwork: View {
             .shadow(color: .black.opacity(0.35), radius: 7, y: 3)
             Text(highlightedName)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(isDark ? .white : .black.opacity(0.85))
+                .foregroundStyle(.white)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .shadow(color: .black.opacity(isDark ? 0.6 : 0.15), radius: 2, y: 1)
+                .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
