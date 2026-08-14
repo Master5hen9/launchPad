@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 public final class LaunchpadWindowController: NSObject {
     private var window: LaunchpadWindow?
-    private weak var hostingView: NSHostingView?
+    private weak var hostingView: NSView?
     private var lastFrontmostApp: NSRunningApplication?
     private var previousFrontmostApp: NSRunningApplication?
     public private(set) var isOpen = false
@@ -99,17 +99,13 @@ public final class LaunchpadWindowController: NSObject {
         isOpen = true
         isConsumingGestures = true
 
-        window.alphaValue = 0
+        window.alphaValue = 1
         window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        Diagnostics.log("open: requesting key/activation")
 
-        animateScale(of: hostingView, from: 0.96, to: 1, duration: 0.15)
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.15
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            window.animator().alphaValue = 1
-        }
+        animateOverlay(of: window, open: true)
     }
 
     public func close(restoringActivation: Bool = true) {
@@ -119,17 +115,11 @@ public final class LaunchpadWindowController: NSObject {
         }
         isOpen = false
 
-        if let hostingView {
-            animateScale(of: hostingView, from: 1, to: 0.96, duration: 0.18)
-        }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.18
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            window.animator().alphaValue = 0
-        } completionHandler: {
+        animateOverlay(of: window, open: false) {
             Task { @MainActor in
                 window.orderOut(nil)
-                hostingView.layer?.transform = CATransform3DIdentity
+                window.contentView?.layer?.opacity = 1
+                self.hostingView?.layer?.transform = CATransform3DIdentity
                 self.isConsumingGestures = false
                 if restoringActivation {
                     self.restoreFrontmostApp()
@@ -138,23 +128,59 @@ public final class LaunchpadWindowController: NSObject {
         }
     }
 
-    /// Scales only the SwiftUI hosting view — never the blurred background —
-    /// so the zoom close animation stays compositor-cheap and smooth.
-    private func animateScale(
-        of hostingView: NSHostingView,
-        from: CGFloat,
-        to: CGFloat,
-        duration: TimeInterval
+    /// Drives the open/close transition with one Core Animation transaction:
+    /// the content scales (compositor transform) while the whole overlay
+    /// fades (compositor opacity). No blur re-rasterization, no competing
+    /// animation systems, so the transition stays smooth.
+    private func animateOverlay(
+        of window: NSWindow,
+        open: Bool,
+        completion: (() -> Void)? = nil
     ) {
-        hostingView.wantsLayer = true
-        guard let layer = hostingView.layer else { return }
-        let animation = CABasicAnimation(keyPath: "transform.scale")
-        animation.fromValue = from
-        animation.toValue = to
-        animation.duration = duration
-        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        layer.add(animation, forKey: "launchpadScale")
-        layer.transform = CATransform3DScale(CATransform3DIdentity, to, to, 1)
+        let duration: TimeInterval = open ? 0.15 : 0.18
+        let timing = CAMediaTimingFunction(name: .easeInEaseOut)
+
+        window.contentView?.wantsLayer = true
+        hostingView?.wantsLayer = true
+        let contentLayer = window.contentView?.layer
+        let scaleLayer = hostingView?.layer
+
+        if open {
+            contentLayer?.opacity = 0
+            scaleLayer?.transform = CATransform3DScale(CATransform3DIdentity, 0.96, 0.96, 1)
+        }
+
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(duration)
+        CATransaction.setAnimationTimingFunction(timing)
+        CATransaction.setCompletionBlock {
+            completion?()
+        }
+
+        if let contentLayer {
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = open ? 0 : 1
+            fade.toValue = open ? 1 : 0
+            fade.duration = duration
+            fade.timingFunction = timing
+            contentLayer.add(fade, forKey: "launchpadOverlayFade")
+            contentLayer.opacity = open ? 1 : 0
+        }
+        if let scaleLayer {
+            let scale = CABasicAnimation(keyPath: "transform.scale")
+            scale.fromValue = open ? 0.96 : 1
+            scale.toValue = open ? 1 : 0.96
+            scale.duration = duration
+            scale.timingFunction = timing
+            scaleLayer.add(scale, forKey: "launchpadOverlayScale")
+            scaleLayer.transform = CATransform3DScale(
+                CATransform3DIdentity,
+                open ? 1 : 0.96,
+                open ? 1 : 0.96,
+                1
+            )
+        }
+        CATransaction.commit()
     }
 
     public func toggle() {

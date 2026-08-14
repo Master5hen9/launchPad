@@ -302,7 +302,7 @@ final class ContentViewModel {
                 guard let trackURL = lookup.results.first?.trackViewUrl.flatMap(URL.init(string:)) else {
                     return
                 }
-                await MainActor.run {
+                _ = await MainActor.run {
                     NSWorkspace.shared.open(trackURL)
                 }
             } catch {

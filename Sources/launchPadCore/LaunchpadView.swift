@@ -107,6 +107,9 @@ public struct LaunchpadView: View {
             let queryEmpty = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             selectedItemID = queryEmpty ? nil : newIDs.first
         }
+        .onChange(of: viewModel.searchText) { _, newText in
+            Diagnostics.log("search text changed: \"\(newText)\"")
+        }
         .onChange(of: viewModel.filteredOpenFolderApps.map(\.id)) { _, newIDs in
             if let selected = selectedFolderAppID, newIDs.contains(selected) {
                 return
@@ -315,6 +318,9 @@ public struct LaunchpadView: View {
                             .coordinateSpace(name: pageCoordinateSpace(pageIndex))
                     }
                 }
+                // Rasterize the page strip once so paging just moves a
+                // composited layer instead of re-laying out every cell.
+                .drawingGroup()
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
                 .offset(x: -scroller.offset)
                 .clipped()
@@ -683,10 +689,9 @@ public struct LaunchpadView: View {
     /// request can race the window becoming key at open, so retry briefly.
     private func focusSearchField() {
         searchFocused = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-            guard let self else { return }
-            if !self.searchFocused {
-                self.searchFocused = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            if !searchFocused {
+                searchFocused = true
             }
         }
     }
@@ -1269,14 +1274,13 @@ private struct LaunchpadCell: View {
                 onBeginJiggle?()
             }
             .background {
-                GeometryReader { geo in
-                    Color.clear
-                        .onAppear {
-                            selfFrame = geo.frame(in: .named(coordinateSpaceName))
-                        }
-                        .onChange(of: geo.frame(in: .named(coordinateSpaceName))) { _, newFrame in
-                            selfFrame = newFrame
-                        }
+                if case .folder = item {
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear {
+                                selfFrame = geo.frame(in: .named(coordinateSpaceName))
+                            }
+                    }
                 }
             }
 
