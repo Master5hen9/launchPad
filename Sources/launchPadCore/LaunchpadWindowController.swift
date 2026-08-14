@@ -102,7 +102,6 @@ public final class LaunchpadWindowController: NSObject {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        animateScale(of: window, from: 0.96, to: 1, duration: 0.15, key: "launchpadOpenScale")
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -117,7 +116,6 @@ public final class LaunchpadWindowController: NSObject {
         }
         isOpen = false
 
-        animateScale(of: window, from: 1, to: 0.96, duration: 0.18, key: "launchpadCloseScale")
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
@@ -125,33 +123,12 @@ public final class LaunchpadWindowController: NSObject {
         } completionHandler: {
             Task { @MainActor in
                 window.orderOut(nil)
-                window.contentView?.layer?.transform = CATransform3DIdentity
                 self.isConsumingGestures = false
                 if restoringActivation {
                     self.restoreFrontmostApp()
                 }
             }
         }
-    }
-
-    /// Scales the overlay's content layer, giving the open/close transition
-    /// the zoom feel of the original Launchpad on top of the alpha fade.
-    private func animateScale(
-        of window: NSWindow,
-        from: CGFloat,
-        to: CGFloat,
-        duration: TimeInterval,
-        key: String
-    ) {
-        guard let layer = window.contentView?.layer else { return }
-        window.contentView?.wantsLayer = true
-        let animation = CABasicAnimation(keyPath: "transform.scale")
-        animation.fromValue = from
-        animation.toValue = to
-        animation.duration = duration
-        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        layer.add(animation, forKey: key)
-        layer.transform = CATransform3DScale(CATransform3DIdentity, to, to, 1)
     }
 
     public func toggle() {
