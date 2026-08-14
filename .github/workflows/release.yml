@@ -30,4 +30,10 @@ jobs:
           else
             TITLE="launchPad ${GITHUB_REF_NAME#v}"
           fi
-          gh release create "$GITHUB_REF_NAME" --title "$TITLE" --generate-notes dist/launchPad.dmg
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            # Floating tag (e.g. lts): refresh the existing release and asset.
+            gh release edit "$GITHUB_REF_NAME" --title "$TITLE"
+            gh release upload "$GITHUB_REF_NAME" dist/launchPad.dmg --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$TITLE" --generate-notes dist/launchPad.dmg
+          fi
