@@ -318,9 +318,6 @@ public struct LaunchpadView: View {
                             .coordinateSpace(name: pageCoordinateSpace(pageIndex))
                     }
                 }
-                // Rasterize the page strip once so paging just moves a
-                // composited layer instead of re-laying out every cell.
-                .drawingGroup()
                 .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
                 .offset(x: -scroller.offset)
                 .clipped()
