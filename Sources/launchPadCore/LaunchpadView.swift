@@ -92,8 +92,8 @@ public struct LaunchpadView: View {
         .onAppear {
             scroller.installMonitor()
             installKeyMonitor()
-            searchFocused = true
             appeared = true
+            focusSearchField()
         }
         .onDisappear {
             scroller.stopMonitor()
@@ -677,6 +677,18 @@ public struct LaunchpadView: View {
             NSEvent.removeMonitor(keyMonitor)
         }
         keyMonitor = nil
+    }
+
+    /// Focuses the search field once the overlay window is key. The focus
+    /// request can race the window becoming key at open, so retry briefly.
+    private func focusSearchField() {
+        searchFocused = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+            guard let self else { return }
+            if !self.searchFocused {
+                self.searchFocused = true
+            }
+        }
     }
 
     private func installDirectoryChangeObserver() {
