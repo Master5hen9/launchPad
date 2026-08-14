@@ -311,6 +311,15 @@ public struct LaunchpadView: View {
             )
 
             ZStack(alignment: .bottom) {
+                if let frame = hoveredFolderFrame(items: items, layout: layout, size: proxy.size) {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(.white.opacity(0.95), lineWidth: 3)
+                        .frame(width: frame.width * 1.22, height: frame.height * 1.22)
+                        .position(x: frame.midX, y: frame.midY)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.6), value: dragHoverFolderID)
+                        .allowsHitTesting(false)
+                        .zIndex(5)
+                }
                 HStack(spacing: 0) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { pageIndex, pageItems in
                         grid(for: pageItems, pageIndex: pageIndex, columns: columns, layout: layout, screenSize: proxy.size)
@@ -515,6 +524,28 @@ public struct LaunchpadView: View {
         return GridHit(index: pageEnd, item: nil)
     }
 
+    /// Screen-space frame (in the paged grid's coordinate system) of the
+    /// folder currently hovered by a dragged item, if any.
+    private func hoveredFolderFrame(
+        items: [LaunchpadItem],
+        layout: LaunchpadPager.Layout,
+        size: CGSize
+    ) -> CGRect? {
+        guard let hoverID = dragHoverFolderID,
+              let index = items.firstIndex(where: { $0.id == hoverID }),
+              let frame = cellFrames[hoverID]
+        else {
+            return nil
+        }
+        let pageIndex = index / layout.itemsPerPage
+        return CGRect(
+            x: frame.minX + CGFloat(pageIndex) * size.width - scroller.offset,
+            y: frame.minY,
+            width: frame.width,
+            height: frame.height
+        )
+    }
+
     private func handleDragChanged(
         _ value: DragGesture.Value,
         size: CGSize,
@@ -538,6 +569,7 @@ public struct LaunchpadView: View {
             let hit = hitGrid(at: value.location, size: size, layout: layout, pageCount: pageCount, items: items)
             if let item = hit.item, case .folder(let folder) = item {
                 dragHoverFolderID = folder.id
+                Diagnostics.log("drag hover folder: \(folder.id)")
             } else {
                 dragHoverFolderID = nil
             }
