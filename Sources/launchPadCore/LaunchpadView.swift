@@ -16,9 +16,6 @@ public struct LaunchpadView: View {
     @State private var dragLocation: CGPoint = .zero
     @State private var dragEdgeZone: DragEdgeZone?
     @State private var isPagingDrag = false
-    /// Folder cell currently under the dragged item, shown as an enlarged
-    /// drop target.
-    @State private var dragHoverFolderID: String?
     /// Measured cell frames (item id → frame in its page's coordinate space).
     @State private var cellFrames: [String: CGRect] = [:]
     /// True once the main grid has been shown; returning from a folder should
@@ -311,15 +308,6 @@ public struct LaunchpadView: View {
             )
 
             ZStack(alignment: .bottom) {
-                if let frame = hoveredFolderFrame(items: items, layout: layout, size: proxy.size) {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(.white.opacity(0.95), lineWidth: 3)
-                        .frame(width: frame.width * 1.22, height: frame.height * 1.22)
-                        .position(x: frame.midX, y: frame.midY)
-                        .animation(.spring(response: 0.2, dampingFraction: 0.6), value: dragHoverFolderID)
-                        .allowsHitTesting(false)
-                        .zIndex(5)
-                }
                 HStack(spacing: 0) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { pageIndex, pageItems in
                         grid(for: pageItems, pageIndex: pageIndex, columns: columns, layout: layout, screenSize: proxy.size)
@@ -427,7 +415,12 @@ public struct LaunchpadView: View {
             onBeginJiggle: { enterJiggleMode() },
             onManageApp: manageAction,
             onLookupAppStore: { viewModel.openAppStorePage($0) },
-            isDragTarget: dragHoverFolderID == item.id
+            isDragging: draggedItem != nil,
+            dragPoint: draggedItem != nil ? dragLocation : nil,
+            pageIndex: pageIndex,
+            pageWidth: gridSize.width,
+            scrollerOffset: scroller.offset,
+            coordinateSpaceName: pageCoordinateSpace(pageIndex)
         )
         .overlay(alignment: .topLeading) {
             GeometryReader { geo in
@@ -524,26 +517,36 @@ public struct LaunchpadView: View {
         return GridHit(index: pageEnd, item: nil)
     }
 
-    /// Screen-space frame (in the paged grid's coordinate system) of the
-    /// folder currently hovered by a dragged item, if any.
-    private func hoveredFolderFrame(
-        items: [LaunchpadItem],
+    /// The item whose cell is closest to the point (within 30 pt), used to
+    /// start an item drag even when the press lands just outside a cell.
+    private func nearestItem(
+        to location: CGPoint,
+        size: CGSize,
         layout: LaunchpadPager.Layout,
-        size: CGSize
-    ) -> CGRect? {
-        guard let hoverID = dragHoverFolderID,
-              let index = items.firstIndex(where: { $0.id == hoverID }),
-              let frame = cellFrames[hoverID]
-        else {
-            return nil
-        }
-        let pageIndex = index / layout.itemsPerPage
-        return CGRect(
-            x: frame.minX + CGFloat(pageIndex) * size.width - scroller.offset,
-            y: frame.minY,
-            width: frame.width,
-            height: frame.height
+        items: [LaunchpadItem]
+    ) -> LaunchpadItem? {
+        let pageIndex = min(
+            max(Int((location.x + scroller.offset) / size.width), 0),
+            max((items.count - 1) / max(layout.itemsPerPage, 1), 0)
         )
+        let pagePoint = CGPoint(
+            x: location.x + scroller.offset - CGFloat(pageIndex) * size.width,
+            y: location.y
+        )
+        let pageStart = pageIndex * layout.itemsPerPage
+        let pageEnd = min(pageStart + layout.itemsPerPage, items.count)
+        var best: (item: LaunchpadItem, distance: CGFloat)?
+        for index in pageStart..<pageEnd {
+            let item = items[index]
+            guard let frame = cellFrames[item.id] else { continue }
+            let dx = max(frame.minX - pagePoint.x, 0, pagePoint.x - frame.maxX)
+            let dy = max(frame.minY - pagePoint.y, 0, pagePoint.y - frame.maxY)
+            let distance = hypot(dx, dy)
+            if distance <= 30, distance < (best?.distance ?? .infinity) {
+                best = (item, distance)
+            }
+        }
+        return best?.item
     }
 
     private func handleDragChanged(
@@ -558,6 +561,16 @@ public struct LaunchpadView: View {
             if let item = hit.item {
                 draggedItem = item
                 Diagnostics.log("drag started: \(item.id)")
+            } else if let nearest = nearestItem(
+                to: value.startLocation,
+                size: size,
+                layout: layout,
+                items: items
+            ) {
+                // Pressing slightly off the cell edge should still start an
+                // item drag instead of a page swipe.
+                draggedItem = nearest
+                Diagnostics.log("drag started (near): \(nearest.id)")
             } else {
                 // Empty-area drag pages the grid iPhone-style.
                 isPagingDrag = true
@@ -566,13 +579,6 @@ public struct LaunchpadView: View {
         }
         if draggedItem != nil {
             dragLocation = value.location
-            let hit = hitGrid(at: value.location, size: size, layout: layout, pageCount: pageCount, items: items)
-            if let item = hit.item, case .folder(let folder) = item {
-                dragHoverFolderID = folder.id
-                Diagnostics.log("drag hover folder: \(folder.id)")
-            } else {
-                dragHoverFolderID = nil
-            }
             handleItemDragEdgePaging(value, size: size)
             return
         }
@@ -615,7 +621,6 @@ public struct LaunchpadView: View {
             draggedItem = nil
             dragEdgeZone = nil
             isPagingDrag = false
-            dragHoverFolderID = nil
         }
         if let dragged = draggedItem {
             let hit = hitGrid(at: value.location, size: size, layout: layout, pageCount: pageCount, items: items)
@@ -1164,10 +1169,33 @@ private struct LaunchpadCell: View {
     var onLookupAppStore: ((AppRecord) -> Void)?
     /// The cell is the folder currently under a dragged item: expand to hint
     /// it can receive the drop.
-    var isDragTarget = false
+    var isDragging = false
+    var dragPoint: CGPoint?
+    var pageIndex = 0
+    var pageWidth: CGFloat = 1470
+    var scrollerOffset: CGFloat = 0
+    var coordinateSpaceName = "launchpadPage0"
 
     @State private var appeared = false
     @State private var isHovering = false
+    @State private var selfFrame: CGRect?
+
+    /// True while a drag is over this folder cell (mapped from the grid's
+    /// on-screen space into this cell's page-local frame).
+    private var isDropTarget: Bool {
+        guard isDragging,
+              let dragPoint,
+              case .folder = item,
+              let frame = selfFrame
+        else {
+            return false
+        }
+        let pagePoint = CGPoint(
+            x: dragPoint.x + scrollerOffset - CGFloat(pageIndex) * pageWidth,
+            y: dragPoint.y
+        )
+        return frame.insetBy(dx: -30, dy: -30).contains(pagePoint)
+    }
 
     var body: some View {
         cellContent
@@ -1181,7 +1209,7 @@ private struct LaunchpadCell: View {
         let entranceScale: CGFloat = gentleEntrance ? 0.92 : 0.55
         let scale = (!shouldShow ? entranceScale : 1)
             * (isHovering ? 1.05 : 1)
-            * (isDragTarget ? 1.18 : 1)
+            * (isDropTarget ? 1.18 : 1)
         // The artwork is a single pre-rendered image (icon + label + shadows),
         // so the entrance animation moves one layer per cell — no per-frame
         // text layout or shadow rasterization.
@@ -1190,17 +1218,15 @@ private struct LaunchpadCell: View {
             .frame(width: 135, height: 150)
             .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.white.opacity(isHovering || isSelected || isDragTarget ? 0.14 : 0))
+                    .fill(.white.opacity(isHovering || isSelected || isDropTarget ? 0.14 : 0))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(
-                        .white.opacity(isHovering || isSelected || isDragTarget ? 0.35 : 0)
-                    )
+                    .strokeBorder(.white.opacity(isHovering || isSelected || isDropTarget ? 0.35 : 0))
             }
             .scaleEffect(scale)
             .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isHovering)
-            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isDragTarget)
+            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isDropTarget)
             .animation(
                 gentleEntrance
                     ? .easeOut(duration: 0.25).delay(entranceDelay)
@@ -1229,6 +1255,17 @@ private struct LaunchpadCell: View {
             }
             .onLongPressGesture(minimumDuration: 0.45) {
                 onBeginJiggle?()
+            }
+            .background {
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            selfFrame = geo.frame(in: .named(coordinateSpaceName))
+                        }
+                        .onChange(of: geo.frame(in: .named(coordinateSpaceName))) { _, newFrame in
+                            selfFrame = newFrame
+                        }
+                }
             }
 
         if isJiggleMode {
