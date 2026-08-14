@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 public final class LaunchpadWindowController: NSObject {
     private var window: LaunchpadWindow?
+    private weak var hostingView: NSHostingView?
     private var lastFrontmostApp: NSRunningApplication?
     private var previousFrontmostApp: NSRunningApplication?
     public private(set) var isOpen = false
@@ -91,6 +92,7 @@ public final class LaunchpadWindowController: NSObject {
         hostingView.frame = blurView.bounds
         hostingView.autoresizingMask = [.width, .height]
         blurView.addSubview(hostingView)
+        self.hostingView = hostingView
         window.contentView = blurView
 
         self.window = window
@@ -102,6 +104,7 @@ public final class LaunchpadWindowController: NSObject {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
+        animateScale(of: hostingView, from: 0.96, to: 1, duration: 0.15)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -116,6 +119,9 @@ public final class LaunchpadWindowController: NSObject {
         }
         isOpen = false
 
+        if let hostingView {
+            animateScale(of: hostingView, from: 1, to: 0.96, duration: 0.18)
+        }
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
@@ -123,12 +129,32 @@ public final class LaunchpadWindowController: NSObject {
         } completionHandler: {
             Task { @MainActor in
                 window.orderOut(nil)
+                hostingView.layer?.transform = CATransform3DIdentity
                 self.isConsumingGestures = false
                 if restoringActivation {
                     self.restoreFrontmostApp()
                 }
             }
         }
+    }
+
+    /// Scales only the SwiftUI hosting view — never the blurred background —
+    /// so the zoom close animation stays compositor-cheap and smooth.
+    private func animateScale(
+        of hostingView: NSHostingView,
+        from: CGFloat,
+        to: CGFloat,
+        duration: TimeInterval
+    ) {
+        hostingView.wantsLayer = true
+        guard let layer = hostingView.layer else { return }
+        let animation = CABasicAnimation(keyPath: "transform.scale")
+        animation.fromValue = from
+        animation.toValue = to
+        animation.duration = duration
+        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        layer.add(animation, forKey: "launchpadScale")
+        layer.transform = CATransform3DScale(CATransform3DIdentity, to, to, 1)
     }
 
     public func toggle() {
