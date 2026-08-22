@@ -720,6 +720,13 @@ public struct LaunchpadView: View {
         if folderBeingRenamed != nil || folderBeingDeleted != nil || appBeingManaged != nil {
             return event
         }
+        // While an IME (e.g. Chinese input) is composing text in the search
+        // field, keys like Return/Esc/arrows belong to the composition, not
+        // to the Launchpad's shortcuts — otherwise Enter would launch the
+        // first app instead of committing the candidate.
+        if searchFieldHasMarkedText() {
+            return event
+        }
         switch event.keyCode {
         case 43 where event.modifierFlags.contains(.command): // Cmd+, → Settings
             // Consume the event and let the window controller open Settings
@@ -762,6 +769,16 @@ public struct LaunchpadView: View {
         default:
             return event
         }
+    }
+
+    /// True while the search field's IME composition (marked text) is active.
+    private func searchFieldHasMarkedText() -> Bool {
+        guard searchFocused,
+              let fieldEditor = NSApp.keyWindow?.firstResponder as? NSTextView
+        else {
+            return false
+        }
+        return fieldEditor.markedRange().length > 0
     }
 
     private func moveSelection(dx: Int, dy: Int) {
