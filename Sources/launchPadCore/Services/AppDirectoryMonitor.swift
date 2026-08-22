@@ -63,6 +63,13 @@ public final class AppDirectoryMonitor: @unchecked Sendable {
         workItem?.cancel()
         let item = DispatchWorkItem {
             NotificationCenter.default.post(name: Self.didChangeNotification, object: nil)
+            // The debounce only watches the app-directory itself, so large
+            // installs are still copying (lproj localizations arrive last)
+            // when this first scan runs. Rescan once more after the copy has
+            // had time to finish so localized names show up without a restart.
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 6.0) {
+                NotificationCenter.default.post(name: Self.didChangeNotification, object: nil)
+            }
         }
         workItem = item
         lock.unlock()
