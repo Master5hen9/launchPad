@@ -1239,8 +1239,10 @@ private struct LaunchpadCell: View {
                     .strokeBorder(.white.opacity(isHovering || isSelected || isDropTarget ? 0.35 : 0))
             }
             .scaleEffect(scale)
-            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isHovering)
-            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isDropTarget)
+            // Smooth ease-out for hover/drop highlight: springs overshoot and
+            // make the border flash brighter before settling.
+            .animation(.easeOut(duration: 0.12), value: isHovering)
+            .animation(.easeOut(duration: 0.12), value: isDropTarget)
             .animation(
                 gentleEntrance
                     ? .easeOut(duration: 0.25).delay(entranceDelay)
